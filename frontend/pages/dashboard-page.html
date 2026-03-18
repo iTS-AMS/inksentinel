@@ -1,0 +1,975 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Proctor Console Dashboard</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+      rel="stylesheet"
+    />
+
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#FF5722",
+              secondary: "#10B981",
+              danger: "#EF4444",
+              warning: "#F59E0B",
+              "background-light": "#F9FAFB",
+              "background-dark": "#111827",
+              "surface-light": "#FFFFFF",
+              "surface-dark": "#1F2937",
+              "text-light": "#1F2937",
+              "text-dark": "#F3F4F6",
+              "border-light": "#E5E7EB",
+              "border-dark": "#374151",
+            },
+            fontFamily: {
+              sans: ["Inter", "sans-serif"],
+            },
+            borderRadius: {
+              DEFAULT: "0.5rem",
+            },
+          },
+        },
+      };
+    </script>
+  </head>
+  <body
+    class="bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark font-sans antialiased h-screen overflow-hidden flex transition-colors duration-200 relative"
+  >
+    <div id="sidebar-placeholder"></div>
+
+    <main class="flex-1 flex flex-col h-full overflow-hidden relative">
+      <div id="header-placeholder"></div>
+
+      <div class="flex-1 overflow-y-auto p-8 relative">
+        <div
+          id="notification-dropdown"
+          class="hidden absolute top-0 right-8 mt-2 w-80 bg-white dark:bg-surface-dark rounded-xl shadow-lg border border-border-light dark:border-border-dark z-40 overflow-hidden"
+        >
+          <div
+            class="p-4 border-b border-border-light dark:border-border-dark flex justify-between items-center bg-gray-50 dark:bg-gray-800"
+          >
+            <h3 class="font-bold text-gray-900 dark:text-white">AI Alerts</h3>
+            <span
+              class="bg-warning text-white text-xs font-bold px-2 py-0.5 rounded-full"
+              >2 New</span
+            >
+          </div>
+          <div
+            class="divide-y divide-border-light dark:divide-border-dark max-h-64 overflow-y-auto"
+          >
+            <div
+              class="p-4 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer transition-colors"
+              onclick="openStudentModal('STU-204', 'vision')"
+            >
+              <div class="flex items-start gap-3">
+                <span class="material-icons-outlined text-warning mt-0.5"
+                  >visibility</span
+                >
+                <div>
+                  <p class="text-sm font-bold text-gray-900 dark:text-white">
+                    Vision Flag: STU-204
+                  </p>
+                  <p class="text-xs text-gray-500">
+                    Suspicious object detected (Smartphone). Conf: 94%
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div
+              class="p-4 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer transition-colors"
+              onclick="openStudentModal('STU-209', 'audio')"
+            >
+              <div class="flex items-start gap-3">
+                <span class="material-icons-outlined text-warning mt-0.5"
+                  >mic</span
+                >
+                <div>
+                  <p class="text-sm font-bold text-gray-900 dark:text-white">
+                    Audio Flag: STU-209
+                  </p>
+                  <p class="text-xs text-gray-500">
+                    Multiple voices detected. Conf: 91%
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+          <div
+            class="bg-surface-light dark:bg-surface-dark p-5 rounded-xl border border-border-light dark:border-border-dark shadow-sm"
+          >
+            <h3
+              class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2"
+            >
+              Total Students
+            </h3>
+            <div class="flex items-baseline justify-between">
+              <span class="text-3xl font-bold text-gray-900 dark:text-white"
+                >24</span
+              ><span
+                class="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs font-semibold px-2.5 py-1 rounded-md"
+                >100% Capacity</span
+              >
+            </div>
+          </div>
+          <div
+            class="bg-surface-light dark:bg-surface-dark p-5 rounded-xl border border-border-light dark:border-border-dark shadow-sm"
+          >
+            <h3
+              class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2"
+            >
+              Active
+            </h3>
+            <div class="flex items-baseline justify-between">
+              <span class="text-3xl font-bold text-secondary">22</span
+              ><span
+                class="bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 text-xs font-semibold px-2.5 py-1 rounded-md"
+                >+2.5%</span
+              >
+            </div>
+          </div>
+          <div
+            class="bg-surface-light dark:bg-surface-dark p-5 rounded-xl border border-border-light dark:border-border-dark shadow-sm"
+          >
+            <h3
+              class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2"
+            >
+              Paused
+            </h3>
+            <div class="flex items-baseline justify-between">
+              <span class="text-3xl font-bold text-gray-400 dark:text-gray-500"
+                >0</span
+              ><span
+                class="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs font-semibold px-2.5 py-1 rounded-md"
+                >0%</span
+              >
+            </div>
+          </div>
+          <div
+            class="bg-amber-50 dark:bg-amber-900/10 p-5 rounded-xl border border-amber-200 dark:border-amber-800 shadow-sm relative overflow-hidden"
+          >
+            <h3
+              class="text-xs font-bold text-amber-600 dark:text-amber-500 uppercase tracking-wide mb-2"
+            >
+              AI Alerts
+            </h3>
+            <div class="flex items-baseline justify-between relative z-10">
+              <span
+                class="text-3xl font-bold text-amber-600 dark:text-amber-500"
+                >2</span
+              ><span
+                class="bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 text-xs font-bold px-3 py-1 rounded-md"
+                >Action Needed</span
+              >
+            </div>
+          </div>
+        </div>
+
+        <div
+          class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6"
+        >
+          <h2 class="text-xl font-bold text-gray-900 dark:text-white">
+            Student Monitoring Grid
+          </h2>
+          <div class="flex items-center gap-3">
+            <div class="relative">
+              <span
+                class="material-icons-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg"
+                >search</span
+              >
+              <input
+                id="studentSearch"
+                class="pl-10 pr-4 py-2 w-64 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary focus:border-primary focus:outline-none transition-all"
+                placeholder="Search student ID..."
+                type="text"
+              />
+            </div>
+            <button
+              class="p-2 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 transition-colors"
+            >
+              <span class="material-icons-outlined text-lg">filter_list</span>
+            </button>
+          </div>
+        </div>
+
+        <div
+          id="studentGrid"
+          class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-12"
+        >
+          <div
+            class="student-card bg-white dark:bg-surface-dark rounded-xl p-4 border-2 border-warning shadow-sm relative cursor-pointer hover:shadow-md transition-shadow"
+            onclick="openStudentModal('STU-204', 'vision')"
+          >
+            <div
+              class="absolute top-3 right-3 w-2 h-2 bg-warning rounded-full animate-pulse"
+            ></div>
+            <div class="flex items-start gap-4 mb-4">
+              <div
+                class="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-400 dark:text-gray-500 ring-2 ring-gray-100 dark:ring-gray-700"
+              >
+                <span class="material-symbols-outlined text-3xl">person</span>
+              </div>
+              <div>
+                <span class="text-[10px] font-bold text-gray-400 uppercase"
+                  >A-12</span
+                >
+                <h4
+                  class="student-id font-bold text-gray-900 dark:text-white text-lg leading-tight"
+                >
+                  STU-204
+                </h4>
+              </div>
+            </div>
+            <div
+              class="grid grid-cols-2 gap-2 text-xs border-t border-warning/30 pt-3"
+            >
+              <div>
+                <span class="block font-bold text-warning uppercase"
+                  >AI Flag:</span
+                ><span
+                  class="block font-semibold text-gray-700 dark:text-gray-300"
+                  >VISION</span
+                >
+              </div>
+              <div class="text-right">
+                <span class="block font-bold text-warning">74%</span
+                ><span class="block font-semibold text-gray-500">CONF.</span>
+              </div>
+            </div>
+          </div>
+
+          <div
+            class="student-card bg-white dark:bg-surface-dark rounded-xl p-4 border border-border-light dark:border-border-dark shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+            onclick="openStudentModal('STU-205', 'normal')"
+          >
+            <div class="flex items-start gap-4 mb-6">
+              <div
+                class="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-400 dark:text-gray-500 ring-2 ring-gray-100 dark:ring-gray-700"
+              >
+                <span class="material-symbols-outlined text-3xl">person</span>
+              </div>
+              <div>
+                <span class="text-[10px] font-bold text-gray-400 uppercase"
+                  >A-13</span
+                >
+                <h4
+                  class="student-id font-bold text-gray-900 dark:text-white text-lg leading-tight"
+                >
+                  STU-205
+                </h4>
+              </div>
+            </div>
+            <div class="flex items-center gap-2 mt-auto">
+              <span class="w-2 h-2 bg-secondary rounded-full"></span
+              ><span
+                class="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide"
+                >Active Monitoring</span
+              >
+            </div>
+          </div>
+
+          <div
+            class="student-card bg-white dark:bg-surface-dark rounded-xl p-4 border-2 border-warning shadow-sm relative cursor-pointer hover:shadow-md transition-shadow"
+            onclick="openStudentModal('STU-209', 'audio')"
+          >
+            <div
+              class="absolute top-3 right-3 w-2 h-2 bg-warning rounded-full animate-pulse"
+            ></div>
+            <div class="flex items-start gap-4 mb-4">
+              <div
+                class="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-400 dark:text-gray-500 ring-2 ring-gray-100 dark:ring-gray-700"
+              >
+                <span class="material-symbols-outlined text-3xl">person</span>
+              </div>
+              <div>
+                <span class="text-[10px] font-bold text-gray-400 uppercase"
+                  >B-01</span
+                >
+                <h4
+                  class="student-id font-bold text-gray-900 dark:text-white text-lg leading-tight"
+                >
+                  STU-209
+                </h4>
+              </div>
+            </div>
+            <div
+              class="grid grid-cols-2 gap-2 text-xs border-t border-warning/30 pt-3"
+            >
+              <div>
+                <span class="block font-bold text-warning uppercase"
+                  >AI Flag:</span
+                ><span
+                  class="block font-semibold text-gray-700 dark:text-gray-300"
+                  >AUDIO</span
+                >
+              </div>
+              <div class="text-right">
+                <span class="block font-bold text-warning">91%</span
+                ><span class="block font-semibold text-gray-500">CONF.</span>
+              </div>
+            </div>
+          </div>
+
+          <div
+            class="student-card bg-white dark:bg-surface-dark rounded-xl p-4 border border-border-light dark:border-border-dark shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+            onclick="openStudentModal('STU-210', 'normal')"
+          >
+            <div class="flex items-start gap-4 mb-6">
+              <div
+                class="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-400 dark:text-gray-500 ring-2 ring-gray-100 dark:ring-gray-700"
+              >
+                <span class="material-symbols-outlined text-3xl">person</span>
+              </div>
+              <div>
+                <span class="text-[10px] font-bold text-gray-400 uppercase"
+                  >B-02</span
+                >
+                <h4
+                  class="student-id font-bold text-gray-900 dark:text-white text-lg leading-tight"
+                >
+                  STU-210
+                </h4>
+              </div>
+            </div>
+            <div class="flex items-center gap-2 mt-auto">
+              <span class="w-2 h-2 bg-secondary rounded-full"></span
+              ><span
+                class="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide"
+                >Active Monitoring</span
+              >
+            </div>
+          </div>
+
+          <div
+            class="student-card bg-white dark:bg-surface-dark rounded-xl p-4 border border-border-light dark:border-border-dark shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+            onclick="openStudentModal('STU-211', 'normal')"
+          >
+            <div class="flex items-start gap-4 mb-6">
+              <div
+                class="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-400 dark:text-gray-500 ring-2 ring-gray-100 dark:ring-gray-700"
+              >
+                <span class="material-symbols-outlined text-3xl">person</span>
+              </div>
+              <div>
+                <span class="text-[10px] font-bold text-gray-400 uppercase"
+                  >B-03</span
+                >
+                <h4
+                  class="student-id font-bold text-gray-900 dark:text-white text-lg leading-tight"
+                >
+                  STU-211
+                </h4>
+              </div>
+            </div>
+            <div class="flex items-center gap-2 mt-auto">
+              <span class="w-2 h-2 bg-secondary rounded-full"></span
+              ><span
+                class="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide"
+                >Active Monitoring</span
+              >
+            </div>
+          </div>
+
+          <div
+            class="student-card bg-white dark:bg-surface-dark rounded-xl p-4 border border-border-light dark:border-border-dark shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+            onclick="openStudentModal('STU-215', 'normal')"
+          >
+            <div class="flex items-start gap-4 mb-6">
+              <div
+                class="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-400 dark:text-gray-500 ring-2 ring-gray-100 dark:ring-gray-700"
+              >
+                <span class="material-symbols-outlined text-3xl">person</span>
+              </div>
+              <div>
+                <span class="text-[10px] font-bold text-gray-400 uppercase"
+                  >C-10</span
+                >
+                <h4
+                  class="student-id font-bold text-gray-900 dark:text-white text-lg leading-tight"
+                >
+                  STU-215
+                </h4>
+              </div>
+            </div>
+            <div class="flex items-center gap-2 mt-auto">
+              <span class="w-2 h-2 bg-secondary rounded-full"></span
+              ><span
+                class="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide"
+                >Active Monitoring</span
+              >
+            </div>
+          </div>
+
+          <div
+            class="student-card bg-white dark:bg-surface-dark rounded-xl p-4 border border-border-light dark:border-border-dark shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+            onclick="openStudentModal('STU-216', 'normal')"
+          >
+            <div class="flex items-start gap-4 mb-6">
+              <div
+                class="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-400 dark:text-gray-500 ring-2 ring-gray-100 dark:ring-gray-700"
+              >
+                <span class="material-symbols-outlined text-3xl">person</span>
+              </div>
+              <div>
+                <span class="text-[10px] font-bold text-gray-400 uppercase"
+                  >C-11</span
+                >
+                <h4
+                  class="student-id font-bold text-gray-900 dark:text-white text-lg leading-tight"
+                >
+                  STU-216
+                </h4>
+              </div>
+            </div>
+            <div class="flex items-center gap-2 mt-auto">
+              <span class="w-2 h-2 bg-secondary rounded-full"></span
+              ><span
+                class="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide"
+                >Active Monitoring</span
+              >
+            </div>
+          </div>
+
+          <div
+            class="student-card bg-white dark:bg-surface-dark rounded-xl p-4 border border-border-light dark:border-border-dark shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+            onclick="openStudentModal('STU-217', 'normal')"
+          >
+            <div class="flex items-start gap-4 mb-6">
+              <div
+                class="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-400 dark:text-gray-500 ring-2 ring-gray-100 dark:ring-gray-700"
+              >
+                <span class="material-symbols-outlined text-3xl">person</span>
+              </div>
+              <div>
+                <span class="text-[10px] font-bold text-gray-400 uppercase"
+                  >C-12</span
+                >
+                <h4
+                  class="student-id font-bold text-gray-900 dark:text-white text-lg leading-tight"
+                >
+                  STU-217
+                </h4>
+              </div>
+            </div>
+            <div class="flex items-center gap-2 mt-auto">
+              <span class="w-2 h-2 bg-secondary rounded-full"></span
+              ><span
+                class="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide"
+                >Active Monitoring</span
+              >
+            </div>
+          </div>
+
+          <div
+            class="bg-gray-50 dark:bg-surface-dark rounded-xl p-4 border border-dashed border-gray-300 dark:border-gray-700 flex flex-col justify-center h-full"
+          >
+            <div class="flex items-start gap-4 opacity-50 mb-6">
+              <div
+                class="w-12 h-12 rounded-full bg-gray-200 dark:bg-gray-700 animate-pulse"
+              ></div>
+              <div class="space-y-2">
+                <div
+                  class="w-8 h-3 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"
+                ></div>
+                <div
+                  class="w-16 h-5 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"
+                ></div>
+                <span class="text-xs text-gray-400 italic">Loading...</span>
+              </div>
+            </div>
+            <div class="flex items-center gap-2 mt-auto opacity-50">
+              <span class="w-2 h-2 bg-gray-400 rounded-full"></span
+              ><span
+                class="text-[10px] font-bold text-gray-400 uppercase tracking-wide"
+                >Connecting</span
+              >
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <div
+      id="terminate-modal"
+      class="hidden fixed inset-0 z-[60] flex items-center justify-center bg-gray-900/40 dark:bg-gray-900/60 backdrop-blur-sm transition-all duration-300"
+    >
+      <div
+        class="bg-white dark:bg-surface-dark rounded-2xl shadow-2xl max-w-lg w-full mx-4 border border-gray-100 dark:border-gray-700 overflow-hidden"
+      >
+        <div class="p-8 pb-6 text-center">
+          <div
+            class="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30 mb-6"
+          >
+            <span class="material-icons-outlined text-3xl text-danger"
+              >warning</span
+            >
+          </div>
+          <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-2">
+            Terminate Examination
+          </h3>
+          <p
+            class="text-gray-500 dark:text-gray-400 text-sm leading-relaxed px-4"
+          >
+            Are you sure you want to terminate this session for all students?
+            This action
+            <span class="font-bold text-danger">cannot be undone</span>.
+          </p>
+        </div>
+        <div class="px-8 pb-8 space-y-3">
+          <button
+            onclick="
+              executeAction(
+                'Standard Exam Termination Complete!',
+                'terminate-modal',
+              )
+            "
+            class="w-full flex items-center justify-between p-4 rounded-xl border-2 border-transparent hover:border-secondary bg-gray-50 hover:bg-green-50 dark:bg-gray-800 dark:hover:bg-green-900/20 group transition-all duration-200"
+          >
+            <div class="flex items-center gap-4">
+              <div
+                class="w-10 h-10 rounded-full bg-white dark:bg-gray-700 flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform"
+              >
+                <span class="material-icons-outlined text-secondary"
+                  >check_circle</span
+                >
+              </div>
+              <div class="text-left">
+                <p
+                  class="font-bold text-gray-900 dark:text-white group-hover:text-secondary transition-colors"
+                >
+                  Exam is Over
+                </p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">
+                  Standard session completion
+                </p>
+              </div>
+            </div>
+            <span
+              class="material-icons-outlined text-gray-400 group-hover:text-secondary group-hover:translate-x-1 transition-all"
+              >arrow_forward</span
+            >
+          </button>
+          <button
+            onclick="
+              executeAction(
+                'Emergency Termination Initiated!',
+                'terminate-modal',
+              )
+            "
+            class="w-full flex items-center justify-between p-4 rounded-xl border-2 border-transparent hover:border-danger bg-gray-50 hover:bg-red-50 dark:bg-gray-800 dark:hover:bg-red-900/20 group transition-all duration-200"
+          >
+            <div class="flex items-center gap-4">
+              <div
+                class="w-10 h-10 rounded-full bg-white dark:bg-gray-700 flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform"
+              >
+                <span class="material-icons-outlined text-danger"
+                  >emergency_share</span
+                >
+              </div>
+              <div class="text-left">
+                <p
+                  class="font-bold text-gray-900 dark:text-white group-hover:text-danger transition-colors"
+                >
+                  Emergency
+                </p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">
+                  Immediate force termination
+                </p>
+              </div>
+            </div>
+            <span
+              class="material-icons-outlined text-gray-400 group-hover:text-danger group-hover:translate-x-1 transition-all"
+              >arrow_forward</span
+            >
+          </button>
+        </div>
+        <div
+          class="bg-gray-50 dark:bg-gray-800/50 px-8 py-4 flex justify-center border-t border-gray-100 dark:border-gray-700"
+        >
+          <button
+            onclick="closeModal('terminate-modal')"
+            class="text-sm font-medium text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div
+      id="student-modal"
+      class="hidden fixed inset-0 z-[70] flex items-center justify-center bg-gray-900/60 backdrop-blur-sm transition-all duration-300 p-4"
+    >
+      <div
+        class="bg-white dark:bg-surface-dark rounded-2xl shadow-2xl w-full max-w-5xl flex flex-col md:flex-row overflow-hidden max-h-[90vh]"
+      >
+        <div
+          class="w-full md:w-[60%] flex flex-col border-r border-border-light dark:border-border-dark"
+        >
+          <div
+            class="relative flex-1 bg-[#dcd0c3] min-h-[300px] flex items-center justify-center overflow-hidden"
+          >
+            <img
+              src="https://i.pravatar.cc/600?img=11"
+              class="object-cover w-full h-full opacity-80 mix-blend-multiply"
+              alt="Student Feed"
+            />
+
+            <div
+              id="modal-bounding-box"
+              class="absolute top-[40%] right-[25%] border-2 border-warning w-24 h-32 rounded-sm shadow-[0_0_15px_rgba(245,158,11,0.5)]"
+            >
+              <span
+                class="absolute -top-6 left-1/2 -translate-x-1/2 bg-warning text-white text-[10px] font-bold px-2 py-0.5 rounded whitespace-nowrap"
+                >SMARTPHONE DETECTED</span
+              >
+            </div>
+
+            <div class="absolute top-4 left-4 flex gap-2">
+              <div
+                class="bg-danger text-white text-[10px] font-bold px-2 py-1 rounded flex items-center gap-1 shadow-md"
+              >
+                <span
+                  class="w-2 h-2 rounded-full bg-white animate-pulse"
+                ></span>
+                LIVE
+              </div>
+              <div
+                class="bg-gray-900/60 text-white text-[10px] font-bold px-2 py-1 rounded backdrop-blur-sm"
+              >
+                Camera 02
+              </div>
+            </div>
+          </div>
+
+          <div class="h-48 bg-white dark:bg-surface-dark p-5 overflow-y-auto">
+            <h4
+              class="text-xs font-bold text-gray-500 flex items-center gap-2 mb-4 uppercase tracking-wider"
+            >
+              <span class="material-icons-outlined text-sm">history</span>
+              Session Log
+            </h4>
+            <div
+              id="modal-ai-log"
+              class="space-y-4 relative before:absolute before:inset-0 before:ml-2.5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-gray-200 before:to-transparent"
+            ></div>
+          </div>
+        </div>
+
+        <div
+          class="w-full md:w-[40%] bg-white dark:bg-surface-dark p-6 flex flex-col"
+        >
+          <div class="flex justify-between items-start mb-6">
+            <div>
+              <h2
+                id="modal-student-id"
+                class="text-2xl font-bold text-gray-900 dark:text-white"
+              >
+                STU----
+              </h2>
+              <div class="flex items-center gap-2 mt-1">
+                <span
+                  class="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-xs px-2 py-0.5 rounded font-medium"
+                  >Session Room 1</span
+                >
+              </div>
+            </div>
+            <button
+              onclick="closeModal('student-modal')"
+              class="text-gray-400 hover:text-gray-600 dark:hover:text-white transition-colors"
+            >
+              <span class="material-icons-outlined pointer-events-none"
+                >close</span
+              >
+            </button>
+          </div>
+
+          <div
+            id="modal-warning-banner"
+            class="bg-amber-50 dark:bg-amber-900/10 border border-warning/30 rounded-xl p-4 mb-8"
+          >
+            <h4
+              class="font-bold text-amber-700 dark:text-amber-500 flex items-center gap-2 mb-1 text-sm"
+            >
+              <span class="material-icons-outlined text-warning text-lg"
+                >warning_amber</span
+              >
+              Suspicious Activity Flagged
+            </h4>
+            <p
+              class="text-xs text-amber-600/80 dark:text-amber-400/80 pl-7 leading-relaxed"
+            >
+              System detected unauthorized activity. Proctor review recommended
+              immediately.
+            </p>
+          </div>
+
+          <div class="mb-auto">
+            <h4
+              class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3"
+            >
+              Exam Time Adjustment
+            </h4>
+            <div
+              class="flex items-center justify-between bg-gray-50 dark:bg-gray-800 rounded-lg p-2 border border-gray-100 dark:border-gray-700"
+            >
+              <button
+                onclick="adjustTime(-5)"
+                class="px-3 py-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-700 shadow-sm text-sm font-medium transition-colors"
+              >
+                - 5 Min
+              </button>
+              <span
+                id="modal-timer-display"
+                class="font-mono font-bold text-gray-900 dark:text-white"
+                >00:00:00</span
+              >
+              <button
+                onclick="adjustTime(5)"
+                class="px-3 py-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-700 shadow-sm text-sm font-medium transition-colors"
+              >
+                + 5 Min
+              </button>
+            </div>
+          </div>
+
+          <div class="mt-8 space-y-3">
+            <h4
+              class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3"
+            >
+              Proctor Actions
+            </h4>
+            <button
+              onclick="
+                executeAction('Warning Issued to Student!', 'student-modal')
+              "
+              class="w-full py-3 rounded-lg border border-border-light dark:border-border-dark font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center justify-center gap-2 transition-colors"
+            >
+              <span class="material-icons-outlined text-lg pointer-events-none"
+                >campaign</span
+              >
+              Issue First Warning
+            </button>
+            <button
+              onclick="
+                executeAction(
+                  'Student Suspended Successfully!',
+                  'student-modal',
+                )
+              "
+              class="w-full py-3 rounded-lg bg-warning hover:bg-amber-600 text-white font-bold flex items-center justify-center gap-2 transition-colors shadow-sm"
+            >
+              <span class="material-icons-outlined text-lg pointer-events-none"
+                >pause_circle</span
+              >
+              Suspend Student
+            </button>
+            <button
+              onclick="
+                executeAction(
+                  'Student Expelled from Examination!',
+                  'student-modal',
+                )
+              "
+              class="w-full py-3 rounded-lg bg-danger hover:bg-red-600 text-white font-bold flex items-center justify-center gap-2 transition-colors shadow-sm"
+            >
+              <span class="material-icons-outlined text-lg pointer-events-none"
+                >person_off</span
+              >
+              Expel Student
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="../scripts/component-loader.js"></script>
+
+    <script>
+      function openModal(modalId) {
+        document.getElementById(modalId).classList.remove("hidden");
+      }
+      function closeModal(modalId) {
+        document.getElementById(modalId).classList.add("hidden");
+      }
+
+      // Smart Dynamic Modal Logic
+      function openStudentModal(studentId, status) {
+        document.getElementById("modal-student-id").innerText = studentId;
+        document
+          .getElementById("notification-dropdown")
+          .classList.add("hidden");
+        document.getElementById("modal-timer-display").innerText =
+          document.querySelector("header span.text-3xl.font-mono")?.innerText ||
+          "00:00:00";
+
+        const boundingBox = document.getElementById("modal-bounding-box");
+        const warningBanner = document.getElementById("modal-warning-banner");
+        const aiLog = document.getElementById("modal-ai-log");
+
+        if (status === "vision") {
+          boundingBox.classList.remove("hidden");
+          boundingBox.innerHTML = `<span class="absolute -top-6 left-1/2 -translate-x-1/2 bg-warning text-white text-[10px] font-bold px-2 py-0.5 rounded whitespace-nowrap">SMARTPHONE DETECTED</span>`;
+          warningBanner.classList.remove("hidden");
+          aiLog.innerHTML = `<div class="relative flex items-center justify-between group pl-8"><span class="absolute left-0 w-5 h-5 rounded-full border-4 border-white dark:border-surface-dark bg-warning"></span><div><h5 class="font-bold text-gray-900 dark:text-white text-sm">Smartphone Detected</h5><p class="text-xs text-gray-500">Confidence: 94%</p></div></div>`;
+        } else if (status === "audio") {
+          boundingBox.classList.add("hidden");
+          warningBanner.classList.remove("hidden");
+          aiLog.innerHTML = `<div class="relative flex items-center justify-between group pl-8"><span class="absolute left-0 w-5 h-5 rounded-full border-4 border-white dark:border-surface-dark bg-warning"></span><div><h5 class="font-bold text-gray-900 dark:text-white text-sm">Multiple Voices Detected</h5><p class="text-xs text-gray-500">Confidence: 91%</p></div></div>`;
+        } else {
+          // NORMAL STUDENT
+          boundingBox.classList.add("hidden");
+          warningBanner.classList.add("hidden");
+          aiLog.innerHTML = `<div class="relative flex items-center justify-between group pl-8"><span class="absolute left-0 w-5 h-5 rounded-full border-4 border-white dark:border-surface-dark bg-secondary"></span><div><h5 class="font-bold text-gray-900 dark:text-white text-sm">Active Monitoring</h5><p class="text-xs text-gray-500">No suspicious activity detected.</p></div></div>`;
+        }
+
+        openModal("student-modal");
+      }
+
+      function executeAction(message, modalId) {
+        alert(message);
+        closeModal(modalId);
+      }
+
+      let timerInterval;
+      let totalSeconds = 0;
+      let isTimerRunning = false;
+      function updateTimerDisplay() {
+        const h = String(Math.floor(totalSeconds / 3600)).padStart(2, "0");
+        const m = String(Math.floor((totalSeconds % 3600) / 60)).padStart(
+          2,
+          "0",
+        );
+        const s = String(totalSeconds % 60).padStart(2, "0");
+        const formattedTime = `${h}:${m}:${s}`;
+
+        const timerElement = document.querySelector(
+          "header span.text-3xl.font-mono",
+        );
+        if (timerElement) timerElement.innerText = formattedTime;
+        const modalTimerElement = document.getElementById(
+          "modal-timer-display",
+        );
+        if (modalTimerElement) modalTimerElement.innerText = formattedTime;
+      }
+
+      function adjustTime(minutes) {
+        totalSeconds += minutes * 60;
+        if (totalSeconds < 0) totalSeconds = 0;
+        updateTimerDisplay();
+      }
+
+      const observer = new MutationObserver(() => {
+        const timerElement = document.querySelector(
+          "header span.text-3xl.font-mono",
+        );
+        if (
+          timerElement &&
+          timerElement.innerText !== "00:00:00" &&
+          !isTimerRunning &&
+          totalSeconds === 0
+        ) {
+          timerElement.innerText = "00:00:00";
+        }
+      });
+      observer.observe(document.body, { childList: true, subtree: true });
+
+      function resetHeaderButtons() {
+        document.querySelectorAll("header button").forEach((btn) => {
+          if (["Start", "Pause", "Resume"].includes(btn.innerText.trim())) {
+            btn.className =
+              "text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 px-5 py-2 rounded-md text-sm font-medium transition-colors";
+          }
+        });
+      }
+
+      document.addEventListener("click", function (e) {
+        const target = e.target;
+        const isBell =
+          (target.classList.contains("material-icons-outlined") &&
+            target.innerText.trim() === "notifications") ||
+          (target.classList.contains("bg-danger") &&
+            target.classList.contains("absolute"));
+        const notifDropdown = document.getElementById("notification-dropdown");
+
+        if (isBell) notifDropdown.classList.toggle("hidden");
+        else if (!target.closest("#notification-dropdown"))
+          notifDropdown.classList.add("hidden");
+
+        const btn = target.closest("button");
+        if (btn && btn.closest("header")) {
+          const text = btn.innerText.trim();
+          if (text === "Start") {
+            resetHeaderButtons();
+            btn.className =
+              "bg-secondary hover:bg-emerald-600 text-white px-5 py-2 rounded-md text-sm font-medium shadow-sm transition-colors";
+            if (!isTimerRunning) {
+              totalSeconds = 0;
+              updateTimerDisplay();
+              isTimerRunning = true;
+              clearInterval(timerInterval);
+              timerInterval = setInterval(() => {
+                totalSeconds++;
+                updateTimerDisplay();
+              }, 1000);
+            }
+          } else if (text === "Pause") {
+            resetHeaderButtons();
+            btn.className =
+              "bg-danger hover:bg-red-600 text-white px-5 py-2 rounded-md text-sm font-medium shadow-sm transition-colors";
+            if (isTimerRunning) {
+              clearInterval(timerInterval);
+              isTimerRunning = false;
+            }
+          } else if (text === "Resume") {
+            resetHeaderButtons();
+            btn.className =
+              "bg-secondary hover:bg-emerald-600 text-white px-5 py-2 rounded-md text-sm font-medium shadow-sm transition-colors";
+            if (!isTimerRunning) {
+              isTimerRunning = true;
+              timerInterval = setInterval(() => {
+                totalSeconds++;
+                updateTimerDisplay();
+              }, 1000);
+            }
+          } else if (text === "Terminate") {
+            clearInterval(timerInterval);
+            isTimerRunning = false;
+            openModal("terminate-modal");
+          }
+        }
+      });
+
+      document
+        .getElementById("studentSearch")
+        .addEventListener("input", function (e) {
+          const term = e.target.value.toLowerCase();
+          document.querySelectorAll(".student-card").forEach((card) => {
+            const idEl = card.querySelector(".student-id");
+            if (idEl)
+              card.style.display = idEl.innerText.toLowerCase().includes(term)
+                ? "block"
+                : "none";
+          });
+        });
+    </script>
+  </body>
+</html>

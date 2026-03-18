@@ -1,0 +1,529 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Exam Setup | ExamNexus</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#FF5722",
+              secondary: "#10B981",
+              danger: "#EF4444",
+              warning: "#F59E0B",
+              "background-light": "#F9FAFB",
+              "background-dark": "#111827",
+              "surface-light": "#FFFFFF",
+              "surface-dark": "#1F2937",
+              "text-light": "#1F2937",
+              "text-dark": "#F3F4F6",
+              "border-light": "#E5E7EB",
+              "border-dark": "#374151",
+              "subtext-light": "#64748B",
+              "subtext-dark": "#94A3B8",
+            },
+            fontFamily: {
+              sans: ["Inter", "sans-serif"],
+            },
+            borderRadius: {
+              DEFAULT: "0.5rem",
+            },
+          },
+        },
+      };
+    </script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/icon?family=Material+Icons+Round"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        font-family: "Inter", sans-serif;
+      }
+      ::-webkit-scrollbar {
+        width: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 3px;
+      }
+      .dark ::-webkit-scrollbar-thumb {
+        background: #475569;
+      }
+    </style>
+  </head>
+  <body
+    class="bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark antialiased h-screen flex overflow-hidden transition-colors duration-200"
+  >
+    <div id="sidebar-placeholder"></div>
+
+    <main class="flex-1 flex flex-col h-full overflow-hidden">
+      <header
+        class="bg-background-light dark:bg-background-dark border-b border-transparent px-8 py-6 flex items-center justify-between shrink-0"
+      >
+        <div class="flex flex-col space-y-1">
+          <nav
+            class="flex items-center text-sm text-subtext-light dark:text-subtext-dark space-x-2"
+          >
+            <span
+              class="hover:text-primary cursor-pointer transition-colors"
+              onclick="window.location.href = 'dashboard-page.html'"
+              >Dashboard</span
+            >
+            <span class="material-icons-round text-sm text-slate-400"
+              >chevron_right</span
+            >
+            <span class="font-medium text-slate-900 dark:text-white"
+              >Exam Setup</span
+            >
+            <span
+              class="ml-2 px-2 py-0.5 rounded-full bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 text-xs font-bold uppercase tracking-wide"
+              >Draft</span
+            >
+          </nav>
+        </div>
+        <div class="flex items-center space-x-4">
+          <button
+            class="text-sm font-medium text-subtext-light dark:text-subtext-dark hover:text-slate-900 dark:hover:text-white transition-colors"
+            onclick="alert('Draft Saved Successfully!')"
+          >
+            Save Draft
+          </button>
+          <button
+            onclick="publishExam()"
+            class="bg-primary hover:bg-orange-600 text-white px-5 py-2.5 rounded-lg text-sm font-medium shadow-sm flex items-center transition-colors"
+          >
+            <span class="material-icons-round text-base mr-2">publish</span>
+            Publish Exam
+          </button>
+        </div>
+      </header>
+
+      <div class="flex-1 overflow-y-auto px-8 pb-10">
+        <div class="mb-8">
+          <h2 class="text-3xl font-bold text-slate-900 dark:text-white mb-2">
+            Configure New Examination
+          </h2>
+          <p class="text-subtext-light dark:text-subtext-dark">
+            Define your assessment parameters and security protocols.
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 max-w-7xl">
+          <div
+            class="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark p-6 shadow-sm"
+          >
+            <div class="flex items-center space-x-3 mb-6">
+              <div class="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
+                <span class="material-icons-round text-primary">info</span>
+              </div>
+              <h3 class="text-lg font-bold text-slate-900 dark:text-white">
+                Basic Exam Info
+              </h3>
+            </div>
+            <div class="space-y-5">
+              <div>
+                <label
+                  class="block text-xs font-bold text-subtext-light dark:text-subtext-dark uppercase tracking-wide mb-1.5"
+                  >Exam Title</label
+                >
+                <input
+                  id="examTitle"
+                  class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-4 py-2.5 text-slate-600 dark:text-slate-300 focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-shadow"
+                  placeholder="Enter exam title"
+                  type="text"
+                  value="e.g. Mid-term Biology 101"
+                />
+              </div>
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label
+                    class="block text-xs font-bold text-subtext-light dark:text-subtext-dark uppercase tracking-wide mb-1.5"
+                    >Subject</label
+                  >
+                  <div class="relative">
+                    <select
+                      class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-4 py-2.5 text-slate-900 dark:text-white appearance-none focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-shadow"
+                    >
+                      <option>Molecular Biology</option>
+                      <option>Computer Science</option>
+                      <option>History 101</option>
+                    </select>
+                    <span
+                      class="material-icons-round absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+                      >expand_more</span
+                    >
+                  </div>
+                </div>
+                <div>
+                  <label
+                    class="block text-xs font-bold text-subtext-light dark:text-subtext-dark uppercase tracking-wide mb-1.5"
+                    >Room</label
+                  >
+                  <input
+                    class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-4 py-2.5 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-shadow"
+                    type="text"
+                    value="Lab 4-B"
+                  />
+                </div>
+              </div>
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label
+                    class="block text-xs font-bold text-subtext-light dark:text-subtext-dark uppercase tracking-wide mb-1.5"
+                    >Date</label
+                  >
+                  <div class="relative">
+                    <input
+                      class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-4 py-2.5 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-shadow"
+                      type="date"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label
+                    class="block text-xs font-bold text-subtext-light dark:text-subtext-dark uppercase tracking-wide mb-1.5"
+                    >Start Time</label
+                  >
+                  <div class="relative">
+                    <input
+                      class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-4 py-2.5 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-shadow"
+                      type="time"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div
+            class="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark p-6 shadow-sm"
+          >
+            <div class="flex items-center space-x-3 mb-6">
+              <div class="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
+                <span class="material-icons-round text-primary">schedule</span>
+              </div>
+              <h3 class="text-lg font-bold text-slate-900 dark:text-white">
+                Time Controls
+              </h3>
+            </div>
+            <div class="space-y-6">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="font-semibold text-slate-900 dark:text-white">
+                    Duration
+                  </p>
+                  <p class="text-sm text-subtext-light dark:text-subtext-dark">
+                    Total active exam time
+                  </p>
+                </div>
+                <div class="flex items-center">
+                  <input
+                    class="w-24 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-center text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-shadow"
+                    type="number"
+                    value="120"
+                  />
+                  <span
+                    class="ml-3 text-sm text-subtext-light dark:text-subtext-dark"
+                    >min</span
+                  >
+                </div>
+              </div>
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="font-semibold text-slate-900 dark:text-white">
+                    Extra Time Allowance
+                  </p>
+                  <p class="text-sm text-subtext-light dark:text-subtext-dark">
+                    For students with accessibility needs
+                  </p>
+                </div>
+                <div class="flex items-center">
+                  <input
+                    class="w-24 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-center text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-shadow"
+                    type="number"
+                    value="15"
+                  />
+                  <span
+                    class="ml-3 text-sm text-subtext-light dark:text-subtext-dark"
+                    >min</span
+                  >
+                </div>
+              </div>
+              <div
+                class="pt-4 border-t border-border-light dark:border-border-dark"
+              >
+                <div class="flex items-center justify-between mb-4">
+                  <div>
+                    <p class="font-semibold text-slate-900 dark:text-white">
+                      Scheduled Break
+                    </p>
+                    <p
+                      class="text-sm text-subtext-light dark:text-subtext-dark"
+                    >
+                      Automatic pause for all students
+                    </p>
+                  </div>
+                  <label
+                    class="relative inline-flex items-center cursor-pointer"
+                  >
+                    <input checked="" class="sr-only peer" type="checkbox" />
+                    <div
+                      class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 dark:peer-focus:ring-orange-800 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"
+                    ></div>
+                  </label>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                  <div>
+                    <label
+                      class="block text-xs font-bold text-subtext-light dark:text-subtext-dark uppercase tracking-wide mb-1.5"
+                      >Break Starts At</label
+                    >
+                    <input
+                      class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-4 py-2.5 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-shadow"
+                      type="text"
+                      value="60"
+                    />
+                  </div>
+                  <div>
+                    <label
+                      class="block text-xs font-bold text-subtext-light dark:text-subtext-dark uppercase tracking-wide mb-1.5"
+                      >Duration (min)</label
+                    >
+                    <input
+                      class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-4 py-2.5 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-shadow"
+                      type="text"
+                      value="10"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div
+            class="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark p-6 shadow-sm"
+          >
+            <div class="flex items-center space-x-3 mb-6">
+              <div class="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
+                <span class="material-icons-round text-primary"
+                  >perm_contact_calendar</span
+                >
+              </div>
+              <h3 class="text-lg font-bold text-slate-900 dark:text-white">
+                Student Configuration
+              </h3>
+            </div>
+            <div class="space-y-6">
+              <div>
+                <p class="font-semibold text-slate-900 dark:text-white mb-3">
+                  Seat Assignment
+                </p>
+                <div class="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg">
+                  <button
+                    class="flex-1 bg-white dark:bg-slate-600 shadow-sm text-slate-900 dark:text-white text-sm font-semibold py-1.5 rounded-md transition-all"
+                  >
+                    Automatic
+                  </button>
+                  <button
+                    class="flex-1 text-subtext-light dark:text-subtext-dark hover:text-slate-900 dark:hover:text-white text-sm font-medium py-1.5 rounded-md transition-colors"
+                  >
+                    Manual Selection
+                  </button>
+                </div>
+              </div>
+              <div>
+                <p class="font-semibold text-slate-900 dark:text-white mb-3">
+                  Device Pairing Status
+                </p>
+                <div
+                  class="bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-100 dark:border-slate-700 overflow-hidden"
+                >
+                  <div
+                    class="px-4 py-3 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between"
+                  >
+                    <div class="flex items-center space-x-3">
+                      <div class="w-2.5 h-2.5 bg-green-500 rounded-full"></div>
+                      <span
+                        class="text-sm font-medium text-slate-700 dark:text-slate-200"
+                        >Section A Tablets</span
+                      >
+                    </div>
+                    <span
+                      class="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-bold rounded uppercase tracking-wider"
+                      >Paired</span
+                    >
+                  </div>
+                  <div class="px-4 py-3 flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                      <div class="w-2.5 h-2.5 bg-yellow-500 rounded-full"></div>
+                      <span
+                        class="text-sm font-medium text-slate-700 dark:text-slate-200"
+                        >Guest Terminals</span
+                      >
+                    </div>
+                    <span
+                      class="px-2 py-1 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 text-xs font-bold rounded uppercase tracking-wider"
+                      >Syncing...</span
+                    >
+                  </div>
+                </div>
+              </div>
+              <button
+                onclick="
+                  alert('Pairing mode activated. Waiting for devices...')
+                "
+                class="w-full py-2.5 border border-primary/20 bg-orange-50 dark:bg-primary/10 text-primary hover:bg-orange-100 dark:hover:bg-primary/20 rounded-lg text-sm font-medium transition-colors"
+              >
+                Pair New Device Cluster
+              </button>
+            </div>
+          </div>
+
+          <div
+            class="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark p-6 shadow-sm"
+          >
+            <div class="flex items-center space-x-3 mb-6">
+              <div class="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
+                <span class="material-icons-round text-primary">security</span>
+              </div>
+              <h3 class="text-lg font-bold text-slate-900 dark:text-white">
+                Safety Controls
+              </h3>
+            </div>
+            <div class="space-y-4">
+              <div
+                class="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700"
+              >
+                <div class="flex items-start space-x-3">
+                  <span class="material-icons-round text-primary mt-0.5"
+                    >visibility</span
+                  >
+                  <div>
+                    <p
+                      class="font-semibold text-sm text-slate-900 dark:text-white"
+                    >
+                      AI Proctoring Monitoring
+                    </p>
+                    <p
+                      class="text-xs text-subtext-light dark:text-subtext-dark mt-0.5"
+                    >
+                      Real-time eye tracking & environment scanning
+                    </p>
+                  </div>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input checked="" class="sr-only peer" type="checkbox" />
+                  <div
+                    class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 dark:peer-focus:ring-orange-800 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"
+                  ></div>
+                </label>
+              </div>
+              <div
+                class="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700"
+              >
+                <div class="flex items-start space-x-3">
+                  <span class="material-icons-round text-primary mt-0.5"
+                    >gesture</span
+                  >
+                  <div>
+                    <p
+                      class="font-semibold text-sm text-slate-900 dark:text-white"
+                    >
+                      Smart Pen Connectivity
+                    </p>
+                    <p
+                      class="text-xs text-subtext-light dark:text-subtext-dark mt-0.5"
+                    >
+                      Sync digitized handwriting for essay exams
+                    </p>
+                  </div>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input class="sr-only peer" type="checkbox" />
+                  <div
+                    class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 dark:peer-focus:ring-orange-800 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"
+                  ></div>
+                </label>
+              </div>
+              <div
+                class="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700"
+              >
+                <div class="flex items-start space-x-3">
+                  <span class="material-icons-round text-primary mt-0.5"
+                    >lock</span
+                  >
+                  <div>
+                    <p
+                      class="font-semibold text-sm text-slate-900 dark:text-white"
+                    >
+                      Lockdown Browser
+                    </p>
+                    <p
+                      class="text-xs text-subtext-light dark:text-subtext-dark mt-0.5"
+                    >
+                      Disable all tabs and external software
+                    </p>
+                  </div>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input checked="" class="sr-only peer" type="checkbox" />
+                  <div
+                    class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 dark:peer-focus:ring-orange-800 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"
+                  ></div>
+                </label>
+              </div>
+              <div
+                class="mt-2 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-900/50 rounded-lg flex items-start space-x-3"
+              >
+                <span
+                  class="material-icons-round text-yellow-600 dark:text-yellow-500 text-sm mt-0.5"
+                  >warning_amber</span
+                >
+                <p
+                  class="text-xs text-yellow-800 dark:text-yellow-200 leading-relaxed"
+                >
+                  Enabling AI proctoring requires high-speed internet. Ensure
+                  all student devices have active cameras.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <script src="../scripts/component-loader.js"></script>
+
+    <script>
+      function publishExam() {
+        const title = document.getElementById("examTitle").value;
+        if (title === "" || title === "e.g. Mid-term Biology 101") {
+          alert("Please enter a valid Exam Title before publishing.");
+        } else {
+          alert("Exam Published Successfully! Redirecting to Dashboard...");
+          window.location.href = "dashboard-page.html";
+        }
+      }
+    </script>
+  </body>
+</html>
