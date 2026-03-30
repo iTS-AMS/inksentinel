@@ -1,0 +1,515 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>System Settings | ExamNexus</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+      rel="stylesheet"
+    />
+
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#F95721",
+              "primary-hover": "#e04e1d",
+              "primary-light": "#FFEEE6",
+              "background-light": "#F8F9FB",
+              "background-dark": "#0F172A",
+              "surface-light": "#FFFFFF",
+              "surface-dark": "#1E293B",
+              "border-light": "#E2E8F0",
+              "border-dark": "#334155",
+              "text-light": "#1E293B",
+              "text-dark": "#E2E8F0",
+              "text-secondary-light": "#64748B",
+              "text-secondary-dark": "#94A3B8",
+            },
+            fontFamily: {
+              display: ["Inter", "sans-serif"],
+              sans: ["Inter", "sans-serif"],
+            },
+            borderRadius: {
+              DEFAULT: "0.5rem",
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      input[type="range"] {
+        -webkit-appearance: none;
+        appearance: none;
+        background: transparent;
+      }
+      input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        height: 16px;
+        width: 16px;
+        border-radius: 50%;
+        background: #f95721;
+        cursor: pointer;
+        margin-top: -6px;
+        box-shadow: 0 0 0 2px #fff;
+      }
+      .dark input[type="range"]::-webkit-slider-thumb {
+        box-shadow: 0 0 0 2px #1e293b;
+      }
+      input[type="range"]::-webkit-slider-runnable-track {
+        width: 100%;
+        height: 4px;
+        cursor: pointer;
+        background: #e2e8f0;
+        border-radius: 2px;
+      }
+      .dark input[type="range"]::-webkit-slider-runnable-track {
+        background: #334155;
+      }
+      .no-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+      .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+    </style>
+  </head>
+  <body
+    class="bg-background-light dark:bg-background-dark font-sans text-text-light dark:text-text-dark antialiased selection:bg-primary selection:text-white h-screen overflow-hidden flex transition-colors duration-200"
+  >
+    <div id="sidebar-placeholder"></div>
+
+    <main
+      class="flex-1 flex flex-col h-screen overflow-hidden bg-background-light dark:bg-background-dark relative"
+    >
+      <header
+        class="bg-surface-light dark:bg-surface-dark border-b border-border-light dark:border-border-dark px-8 h-20 flex items-center justify-between z-10 shrink-0"
+      >
+        <div>
+          <h2 class="text-xl font-bold text-text-light dark:text-white">
+            System Settings
+          </h2>
+          <p
+            class="text-xs text-text-secondary-light dark:text-text-secondary-dark mt-0.5"
+          >
+            Configure global application preferences.
+          </p>
+        </div>
+        <div class="flex items-center gap-4">
+          <button
+            class="text-text-secondary-light dark:text-text-secondary-dark hover:text-primary dark:hover:text-primary transition-colors"
+          >
+            <span class="material-symbols-outlined text-[24px]"
+              >notifications</span
+            >
+          </button>
+          <button
+            class="text-text-secondary-light dark:text-text-secondary-dark hover:text-primary dark:hover:text-primary transition-colors"
+          >
+            <span class="material-symbols-outlined text-[24px]">help</span>
+          </button>
+        </div>
+      </header>
+
+      <div class="flex-1 overflow-y-auto p-8 space-y-6">
+        <div class="max-w-7xl space-y-6">
+          <div
+            class="bg-surface-light dark:bg-surface-dark rounded-xl shadow-sm border border-border-light dark:border-border-dark p-6"
+          >
+            <div class="flex items-center gap-2 mb-5">
+              <span class="material-symbols-outlined text-primary text-xl"
+                >palette</span
+              >
+              <h3 class="text-base font-bold text-text-light dark:text-white">
+                UI Settings
+              </h3>
+            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <div class="space-y-5">
+                <div>
+                  <label
+                    class="block text-sm font-semibold text-text-light dark:text-white mb-3"
+                    >Interface Theme</label
+                  >
+                  <div class="grid grid-cols-3 gap-3" id="theme-buttons">
+                    <button
+                      class="flex flex-col items-center justify-center p-3 rounded-lg border-2 border-primary bg-primary-light/20 text-primary transition-all"
+                    >
+                      <span class="material-symbols-outlined text-xl mb-1"
+                        >light_mode</span
+                      >
+                      <span class="text-xs font-bold">LIGHT</span>
+                    </button>
+                    <button
+                      class="flex flex-col items-center justify-center p-3 rounded-lg border border-border-light dark:border-border-dark hover:bg-gray-50 dark:hover:bg-gray-800 text-text-secondary-light dark:text-text-secondary-dark transition-all"
+                    >
+                      <span class="material-symbols-outlined text-xl mb-1"
+                        >dark_mode</span
+                      >
+                      <span class="text-xs font-semibold">DARK</span>
+                    </button>
+                    <button
+                      class="flex flex-col items-center justify-center p-3 rounded-lg border border-border-light dark:border-border-dark hover:bg-gray-50 dark:hover:bg-gray-800 text-text-secondary-light dark:text-text-secondary-dark transition-all"
+                    >
+                      <span class="material-symbols-outlined text-xl mb-1"
+                        >devices</span
+                      >
+                      <span class="text-xs font-semibold">SYSTEM</span>
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <label
+                    class="block text-sm font-semibold text-text-light dark:text-white mb-2"
+                    >Display Language</label
+                  >
+                  <select
+                    class="w-full rounded-lg border-border-light dark:border-border-dark bg-white dark:bg-slate-800 text-text-light dark:text-white focus:ring-primary focus:border-primary text-sm py-2.5 outline-none cursor-pointer"
+                  >
+                    <option>English</option>
+                    <option>Bangla</option>
+                  </select>
+                </div>
+              </div>
+              <div class="space-y-4">
+                <div>
+                  <div class="flex justify-between items-center mb-2">
+                    <label
+                      class="block text-sm font-semibold text-text-light dark:text-white"
+                      >Font Scaling</label
+                    >
+                    <span
+                      id="font-scale-val"
+                      class="text-xs font-bold text-primary"
+                      >100% (Normal)</span
+                    >
+                  </div>
+                  <input
+                    id="font-slider"
+                    class="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+                    max="125"
+                    min="75"
+                    type="range"
+                    value="100"
+                  />
+                  <div
+                    class="flex justify-between text-xs uppercase tracking-wider text-text-secondary-light dark:text-text-secondary-dark mt-2 font-bold"
+                  >
+                    <span>Small</span>
+                    <span>Large</span>
+                  </div>
+                </div>
+                <div
+                  class="bg-gray-50 dark:bg-slate-900 rounded-lg p-4 border border-border-light dark:border-border-dark"
+                >
+                  <span
+                    class="text-xs text-text-secondary-light dark:text-text-secondary-dark uppercase tracking-wide font-bold block mb-2"
+                    >Preview</span
+                  >
+                  <p
+                    id="font-preview"
+                    class="text-text-light dark:text-gray-300 text-sm leading-relaxed transition-all"
+                  >
+                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed
+                    do eiusmod tempor.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div
+            class="bg-surface-light dark:bg-surface-dark rounded-xl shadow-sm border border-border-light dark:border-border-dark p-6"
+          >
+            <div class="flex items-center gap-2 mb-5">
+              <span class="material-symbols-outlined text-primary text-xl"
+                >code</span
+              >
+              <h3 class="text-base font-bold text-text-light dark:text-white">
+                Advanced System Settings
+              </h3>
+            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+              <div>
+                <label
+                  class="flex items-center gap-2 text-sm font-semibold text-text-light dark:text-white mb-2"
+                >
+                  Backend API URL
+                  <span
+                    class="material-symbols-outlined text-gray-400 text-base cursor-help"
+                    >info</span
+                  >
+                </label>
+                <input
+                  class="w-full rounded-lg border-border-light dark:border-border-dark bg-white dark:bg-slate-800 text-text-light dark:text-white focus:ring-primary focus:border-primary text-sm py-2.5 outline-none"
+                  type="text"
+                  value="https://api.examnexus.cloud/v1"
+                />
+              </div>
+              <div>
+                <label
+                  class="flex items-center gap-2 text-sm font-semibold text-text-light dark:text-white mb-2"
+                >
+                  AI Service URL
+                  <span
+                    class="material-symbols-outlined text-gray-400 text-base cursor-help"
+                    >info</span
+                  >
+                </label>
+                <input
+                  class="w-full rounded-lg border-border-light dark:border-border-dark bg-white dark:bg-slate-800 text-text-light dark:text-white focus:ring-primary focus:border-primary text-sm py-2.5 outline-none"
+                  type="text"
+                  value="https://ai-proctor.services.internal"
+                />
+              </div>
+            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-end">
+              <div class="lg:col-span-2">
+                <label
+                  class="block text-sm font-semibold text-text-light dark:text-white mb-2"
+                  >Hardware Gateway</label
+                >
+                <div class="relative">
+                  <select
+                    class="w-full rounded-lg border-border-light dark:border-border-dark bg-white dark:bg-slate-800 text-text-light dark:text-white focus:ring-primary focus:border-primary appearance-none py-2.5 pl-4 pr-16 text-sm outline-none cursor-pointer"
+                  >
+                    <option>gw-294-883-pro</option>
+                    <option>gw-112-445-std</option>
+                  </select>
+
+                  <div
+                    class="absolute inset-y-0 right-3 flex items-center gap-2 pointer-events-none"
+                  >
+                    <span
+                      class="material-icons-outlined text-green-500 text-[18px]"
+                      >check_circle</span
+                    >
+                    <svg
+                      class="w-4 h-4 text-gray-500"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2.5"
+                        d="M19 9l-7 7-7-7"
+                      ></path>
+                    </svg>
+                  </div>
+                </div>
+              </div>
+
+              <div class="flex gap-3">
+                <button
+                  onclick="alert('Connection Successful! Latency: 14ms')"
+                  class="flex-1 bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 text-text-light dark:text-white font-bold py-2.5 px-4 rounded-lg text-sm transition-colors flex items-center justify-center gap-2"
+                >
+                  <span class="material-symbols-outlined text-base">sync</span>
+                  Test Connection
+                </button>
+                <button
+                  onclick="alert('Gateways refreshed.')"
+                  class="bg-white dark:bg-slate-800 border border-border-light dark:border-border-dark text-text-secondary-light dark:text-text-secondary-dark hover:bg-gray-50 dark:hover:bg-slate-700 py-2.5 px-3 rounded-lg transition-colors flex items-center justify-center"
+                >
+                  <span class="material-symbols-outlined text-base"
+                    >refresh</span
+                  >
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div
+            class="bg-surface-light dark:bg-surface-dark rounded-xl shadow-sm border border-border-light dark:border-border-dark p-6"
+          >
+            <div class="flex items-center gap-2 mb-5">
+              <span class="material-symbols-outlined text-primary text-xl"
+                >visibility</span
+              >
+              <h3 class="text-base font-bold text-text-light dark:text-white">
+                Proctoring Sensitivity
+              </h3>
+            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
+              <div>
+                <div class="flex justify-between items-center mb-3">
+                  <label
+                    class="flex items-center gap-2 text-sm font-semibold text-text-light dark:text-white"
+                  >
+                    Movement Threshold
+                    <span
+                      class="material-symbols-outlined text-gray-400 text-base cursor-help"
+                      >help</span
+                    >
+                  </label>
+                  <span
+                    id="move-val"
+                    class="bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 text-xs font-bold px-2 py-1 rounded"
+                    >45%</span
+                  >
+                </div>
+                <input
+                  id="move-slider"
+                  class="w-full h-1.5"
+                  max="100"
+                  min="0"
+                  type="range"
+                  value="45"
+                />
+                <p
+                  class="mt-2 text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark"
+                >
+                  Flags behavior when significant posture changes are detected.
+                </p>
+              </div>
+              <div>
+                <div class="flex justify-between items-center mb-3">
+                  <label
+                    class="flex items-center gap-2 text-sm font-semibold text-text-light dark:text-white"
+                  >
+                    Audio Sensitivity
+                    <span
+                      class="material-symbols-outlined text-gray-400 text-base cursor-help"
+                      >help</span
+                    >
+                  </label>
+                  <span
+                    id="audio-val"
+                    class="bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 text-xs font-bold px-2 py-1 rounded"
+                    >72%</span
+                  >
+                </div>
+                <input
+                  id="audio-slider"
+                  class="w-full h-1.5"
+                  max="100"
+                  min="0"
+                  type="range"
+                  value="72"
+                />
+                <p
+                  class="mt-2 text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark"
+                >
+                  Threshold for detecting background voices or environmental
+                  noise.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div
+        class="bg-surface-light dark:bg-surface-dark border-t border-border-light dark:border-border-dark px-8 py-5 flex justify-between items-center z-10 shrink-0"
+      >
+        <button
+          onclick="resetDefaults()"
+          class="flex items-center gap-2 text-text-secondary-light dark:text-text-secondary-dark hover:text-text-light dark:hover:text-white font-bold transition-colors text-sm"
+        >
+          <span class="material-symbols-outlined text-base">restart_alt</span>
+          Reset to Defaults
+        </button>
+        <div class="flex gap-4">
+          <button
+            onclick="window.location.href = 'dashboard-page.html'"
+            class="px-5 py-2.5 rounded-lg border border-border-light dark:border-border-dark text-text-light dark:text-white text-sm font-bold hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onclick="saveSettings()"
+            class="px-5 py-2.5 rounded-lg bg-primary hover:bg-primary-hover text-white text-sm font-bold shadow-sm transition-colors"
+          >
+            Save Changes
+          </button>
+        </div>
+      </div>
+    </main>
+
+    <script src="../scripts/component-loader.js"></script>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        const themeButtons = document.querySelectorAll("#theme-buttons button");
+        themeButtons.forEach((btn, index) => {
+          btn.addEventListener("click", () => {
+            themeButtons.forEach((b) => {
+              b.className =
+                "flex flex-col items-center justify-center p-3 rounded-lg border border-border-light dark:border-border-dark hover:bg-gray-50 dark:hover:bg-gray-800 text-text-secondary-light dark:text-text-secondary-dark transition-all";
+            });
+            btn.className =
+              "flex flex-col items-center justify-center p-3 rounded-lg border-2 border-primary bg-primary-light/20 text-primary transition-all";
+
+            if (index === 0) {
+              document.documentElement.classList.remove("dark");
+            } else if (index === 1) {
+              document.documentElement.classList.add("dark");
+            } else {
+              if (
+                window.matchMedia &&
+                window.matchMedia("(prefers-color-scheme: dark)").matches
+              ) {
+                document.documentElement.classList.add("dark");
+              } else {
+                document.documentElement.classList.remove("dark");
+              }
+            }
+          });
+        });
+      });
+
+      const fontSlider = document.getElementById("font-slider");
+      const fontVal = document.getElementById("font-scale-val");
+      const fontPreview = document.getElementById("font-preview");
+
+      fontSlider.addEventListener("input", (e) => {
+        const val = e.target.value;
+        fontVal.innerText = `${val}% ${val == 100 ? "(Normal)" : ""}`;
+        fontPreview.style.fontSize = `${14 * (val / 100)}px`;
+      });
+
+      const moveSlider = document.getElementById("move-slider");
+      const moveVal = document.getElementById("move-val");
+      moveSlider.addEventListener("input", (e) => {
+        moveVal.innerText = `${e.target.value}%`;
+      });
+
+      const audioSlider = document.getElementById("audio-slider");
+      const audioVal = document.getElementById("audio-val");
+      audioSlider.addEventListener("input", (e) => {
+        audioVal.innerText = `${e.target.value}%`;
+      });
+
+      function resetDefaults() {
+        fontSlider.value = 100;
+        fontSlider.dispatchEvent(new Event("input"));
+        moveSlider.value = 45;
+        moveSlider.dispatchEvent(new Event("input"));
+        audioSlider.value = 72;
+        audioSlider.dispatchEvent(new Event("input"));
+        alert("Settings have been reset to default values.");
+      }
+
+      function saveSettings() {
+        alert("Settings saved successfully!");
+        window.location.href = "dashboard-page.html";
+      }
+    </script>
+  </body>
+</html>
