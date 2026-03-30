@@ -1,0 +1,781 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Audit Log | ExamNexus</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+      rel="stylesheet"
+    />
+
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#FF5722",
+              secondary: "#10B981",
+              danger: "#EF4444",
+              warning: "#F59E0B",
+              "background-light": "#F9FAFB",
+              "background-dark": "#111827",
+              "surface-light": "#FFFFFF",
+              "surface-dark": "#1F2937",
+              "text-light": "#1F2937",
+              "text-dark": "#F3F4F6",
+              "border-light": "#E5E7EB",
+              "border-dark": "#374151",
+            },
+            fontFamily: {
+              sans: ["Inter", "sans-serif"],
+            },
+            borderRadius: {
+              DEFAULT: "0.5rem",
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      ::-webkit-scrollbar {
+        width: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 3px;
+      }
+      .dark ::-webkit-scrollbar-thumb {
+        background: #475569;
+      }
+
+      .confidence-bar {
+        height: 6px;
+        border-radius: 3px;
+        background-color: #e5e7eb;
+        overflow: hidden;
+        width: 80px;
+      }
+      .dark .confidence-bar {
+        background-color: #374151;
+      }
+      .confidence-fill {
+        height: 100%;
+        border-radius: 3px;
+      }
+
+      .toggle-switch input:checked + div {
+        background-color: #ff5722;
+      }
+      .toggle-switch input:checked + div::after {
+        transform: translateX(100%);
+        border-color: white;
+      }
+    </style>
+  </head>
+  <body
+    class="bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark font-sans antialiased h-screen overflow-hidden flex transition-colors duration-200 relative"
+  >
+    <div id="sidebar-placeholder"></div>
+
+    <main class="flex-1 flex flex-col h-full overflow-hidden relative">
+      <header
+        class="bg-surface-light dark:bg-surface-dark border-b border-border-light dark:border-border-dark h-20 px-8 flex items-center justify-between z-10 shrink-0"
+      >
+        <div>
+          <h2 class="text-xl font-bold text-gray-900 dark:text-white">
+            Audit Log
+          </h2>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+            Monitoring real-time AI-detected anomalies
+          </p>
+        </div>
+        <div class="flex items-center gap-3">
+          <button
+            onclick="alert('Exporting audit log to CSV...')"
+            class="bg-white dark:bg-gray-800 border border-border-light dark:border-border-dark hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 text-sm font-bold py-2 px-4 rounded-lg transition-colors flex items-center gap-2 shadow-sm"
+          >
+            <span class="material-symbols-outlined text-sm">download</span>
+            Export CSV
+          </button>
+        </div>
+      </header>
+
+      <div class="flex-1 overflow-y-auto p-8">
+        <div class="max-w-6xl mx-auto space-y-6">
+          <div
+            class="flex flex-col md:flex-row md:items-center justify-between gap-4"
+          >
+            <div class="flex items-center gap-6 flex-1">
+              <div class="relative w-full max-w-md">
+                <span
+                  class="material-icons-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg"
+                  >search</span
+                >
+                <input
+                  id="auditSearch"
+                  class="pl-10 pr-4 py-2 w-full bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary focus:border-primary focus:outline-none transition-all"
+                  placeholder="Search Student ID, event type..."
+                  type="text"
+                />
+              </div>
+
+              <div class="flex items-center gap-6">
+                <label class="flex items-center gap-2 cursor-pointer group">
+                  <input
+                    type="checkbox"
+                    id="filter-high-conf"
+                    class="w-4 h-4 text-primary bg-gray-100 border-gray-300 rounded-full focus:ring-primary dark:focus:ring-primary dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600 transition-colors"
+                  />
+                  <span
+                    class="text-sm text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white transition-colors leading-tight"
+                    >High Confidence<br /><span class="text-xs text-gray-400"
+                      >(>90%)</span
+                    ></span
+                  >
+                </label>
+
+                <label class="flex items-center gap-2 cursor-pointer group">
+                  <input
+                    type="checkbox"
+                    checked
+                    id="filter-unresolved"
+                    class="w-4 h-4 text-primary bg-gray-100 border-gray-300 rounded focus:ring-primary dark:focus:ring-primary dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600 transition-colors"
+                  />
+                  <span
+                    class="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition-colors"
+                    >Unresolved Only</span
+                  >
+                </label>
+              </div>
+            </div>
+
+            <div
+              class="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-2 shrink-0"
+            >
+              <span id="top-stats-text"
+                >Showing
+                <strong class="text-gray-900 dark:text-white">0</strong>
+                events</span
+              >
+              <span>•</span>
+              <span>Last updated: 10:45:30 AM</span>
+            </div>
+          </div>
+
+          <div
+            class="bg-surface-light dark:bg-surface-dark rounded-xl shadow-sm border border-border-light dark:border-border-dark overflow-hidden"
+          >
+            <div class="overflow-x-auto">
+              <table class="w-full text-left border-collapse">
+                <thead>
+                  <tr
+                    class="bg-gray-50 dark:bg-gray-800/50 border-b border-border-light dark:border-border-dark"
+                  >
+                    <th
+                      class="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-32"
+                    >
+                      Timestamp
+                    </th>
+                    <th
+                      class="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                    >
+                      Student ID
+                    </th>
+                    <th
+                      class="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                    >
+                      Event Type
+                    </th>
+                    <th
+                      class="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                    >
+                      Confidence %
+                    </th>
+                    <th
+                      class="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-24 text-center"
+                    >
+                      Status
+                    </th>
+                    <th
+                      class="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                    >
+                      Invigilator Action
+                    </th>
+                    <th
+                      class="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-center w-20"
+                    >
+                      Details
+                    </th>
+                  </tr>
+                </thead>
+                <tbody
+                  class="divide-y divide-border-light dark:border-border-dark"
+                  id="auditTableBody"
+                >
+                  <tr
+                    class="audit-row hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                    data-confidence="94"
+                    data-resolved="false"
+                  >
+                    <td
+                      class="relative px-6 py-5 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white"
+                    >
+                      <div
+                        class="absolute left-0 top-0 bottom-0 w-1 bg-danger"
+                      ></div>
+                      10:45:22 AM
+                    </td>
+                    <td
+                      class="px-6 py-5 whitespace-nowrap text-sm font-bold text-gray-700 dark:text-gray-300"
+                    >
+                      STU-204
+                    </td>
+                    <td class="px-6 py-5 whitespace-nowrap">
+                      <span
+                        class="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 text-xs font-bold px-2.5 py-1 rounded-full"
+                        >Phone Detected</span
+                      >
+                    </td>
+                    <td class="px-6 py-5 whitespace-nowrap">
+                      <div class="flex items-center gap-3">
+                        <div class="confidence-bar">
+                          <div
+                            class="confidence-fill bg-danger"
+                            style="width: 94%"
+                          ></div>
+                        </div>
+                        <span class="text-sm font-bold text-danger">94%</span>
+                      </div>
+                    </td>
+                    <td class="px-6 py-5 whitespace-nowrap text-center">
+                      <label
+                        class="toggle-switch relative inline-flex items-center cursor-pointer justify-center"
+                      >
+                        <input type="checkbox" class="sr-only peer" />
+                        <div
+                          class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600"
+                        ></div>
+                      </label>
+                    </td>
+                    <td
+                      class="px-6 py-5 whitespace-nowrap text-sm font-medium text-gray-400 italic"
+                    >
+                      Awaiting intervention...
+                    </td>
+                    <td class="px-6 py-5 whitespace-nowrap text-center">
+                      <button
+                        onclick="openStudentModal('STU-204', 'vision')"
+                        class="text-gray-400 hover:text-primary transition-colors p-1 rounded-md hover:bg-orange-50 dark:hover:bg-orange-900/20"
+                        title="View Details"
+                      >
+                        <span class="material-symbols-outlined text-lg"
+                          >visibility</span
+                        >
+                      </button>
+                    </td>
+                  </tr>
+
+                  <tr
+                    class="audit-row hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                    data-confidence="91"
+                    data-resolved="true"
+                  >
+                    <td
+                      class="px-6 py-5 whitespace-nowrap text-sm font-medium text-gray-600 dark:text-gray-400"
+                    >
+                      10:42:15 AM
+                    </td>
+                    <td
+                      class="px-6 py-5 whitespace-nowrap text-sm font-bold text-gray-700 dark:text-gray-300"
+                    >
+                      STU-209
+                    </td>
+                    <td class="px-6 py-5 whitespace-nowrap">
+                      <span
+                        class="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 text-xs font-bold px-2.5 py-1 rounded-full"
+                        >Talking</span
+                      >
+                    </td>
+                    <td class="px-6 py-5 whitespace-nowrap">
+                      <div class="flex items-center gap-3">
+                        <div class="confidence-bar">
+                          <div
+                            class="confidence-fill bg-warning"
+                            style="width: 91%"
+                          ></div>
+                        </div>
+                        <span class="text-sm font-bold text-gray-500">91%</span>
+                      </div>
+                    </td>
+                    <td class="px-6 py-5 whitespace-nowrap text-center">
+                      <label
+                        class="toggle-switch relative inline-flex items-center cursor-pointer justify-center"
+                      >
+                        <input type="checkbox" checked class="sr-only peer" />
+                        <div
+                          class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600"
+                        ></div>
+                      </label>
+                    </td>
+                    <td
+                      class="px-6 py-5 whitespace-nowrap text-sm font-bold text-secondary flex items-center gap-1.5"
+                    >
+                      <span class="material-symbols-outlined text-base"
+                        >check_circle</span
+                      >
+                      Dismissed
+                    </td>
+                    <td class="px-6 py-5 whitespace-nowrap text-center">
+                      <button
+                        onclick="openStudentModal('STU-209', 'audio')"
+                        class="text-gray-400 hover:text-primary transition-colors p-1 rounded-md hover:bg-orange-50 dark:hover:bg-orange-900/20"
+                        title="View Details"
+                      >
+                        <span class="material-symbols-outlined text-lg"
+                          >visibility</span
+                        >
+                      </button>
+                    </td>
+                  </tr>
+
+                  <tr
+                    class="audit-row hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                    data-confidence="88"
+                    data-resolved="false"
+                  >
+                    <td
+                      class="px-6 py-5 whitespace-nowrap text-sm font-medium text-gray-600 dark:text-gray-400"
+                    >
+                      10:38:50 AM
+                    </td>
+                    <td
+                      class="px-6 py-5 whitespace-nowrap text-sm font-bold text-gray-700 dark:text-gray-300"
+                    >
+                      STU-204
+                    </td>
+                    <td class="px-6 py-5 whitespace-nowrap">
+                      <span
+                        class="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 text-xs font-bold px-2.5 py-1 rounded-full"
+                        >Multiple People</span
+                      >
+                    </td>
+                    <td class="px-6 py-5 whitespace-nowrap">
+                      <div class="flex items-center gap-3">
+                        <div class="confidence-bar">
+                          <div
+                            class="confidence-fill bg-danger"
+                            style="width: 88%"
+                          ></div>
+                        </div>
+                        <span class="text-sm font-bold text-danger">88%</span>
+                      </div>
+                    </td>
+                    <td class="px-6 py-5 whitespace-nowrap text-center">
+                      <label
+                        class="toggle-switch relative inline-flex items-center cursor-pointer justify-center"
+                      >
+                        <input type="checkbox" class="sr-only peer" />
+                        <div
+                          class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600"
+                        ></div>
+                      </label>
+                    </td>
+                    <td
+                      class="px-6 py-5 whitespace-nowrap text-sm font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1.5"
+                    >
+                      <span class="material-symbols-outlined text-base"
+                        >notifications_active</span
+                      >
+                      Student Notified
+                    </td>
+                    <td class="px-6 py-5 whitespace-nowrap text-center">
+                      <button
+                        onclick="openStudentModal('STU-204', 'vision')"
+                        class="text-gray-400 hover:text-primary transition-colors p-1 rounded-md hover:bg-orange-50 dark:hover:bg-orange-900/20"
+                        title="View Details"
+                      >
+                        <span class="material-symbols-outlined text-lg"
+                          >visibility</span
+                        >
+                      </button>
+                    </td>
+                  </tr>
+
+                  <tr
+                    class="audit-row hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                    data-confidence="65"
+                    data-resolved="true"
+                  >
+                    <td
+                      class="px-6 py-5 whitespace-nowrap text-sm font-medium text-gray-600 dark:text-gray-400"
+                    >
+                      10:35:12 AM
+                    </td>
+                    <td
+                      class="px-6 py-5 whitespace-nowrap text-sm font-bold text-gray-700 dark:text-gray-300"
+                    >
+                      STU-215
+                    </td>
+                    <td class="px-6 py-5 whitespace-nowrap">
+                      <span
+                        class="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs font-bold px-2.5 py-1 rounded-full"
+                        >Looking Away</span
+                      >
+                    </td>
+                    <td class="px-6 py-5 whitespace-nowrap">
+                      <div class="flex items-center gap-3">
+                        <div class="confidence-bar">
+                          <div
+                            class="confidence-fill bg-blue-500"
+                            style="width: 65%"
+                          ></div>
+                        </div>
+                        <span class="text-sm font-bold text-gray-500">65%</span>
+                      </div>
+                    </td>
+                    <td class="px-6 py-5 whitespace-nowrap text-center">
+                      <label
+                        class="toggle-switch relative inline-flex items-center cursor-pointer justify-center"
+                      >
+                        <input type="checkbox" checked class="sr-only peer" />
+                        <div
+                          class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600"
+                        ></div>
+                      </label>
+                    </td>
+                    <td
+                      class="px-6 py-5 whitespace-nowrap text-sm font-bold text-secondary flex items-center gap-1.5"
+                    >
+                      <span class="material-symbols-outlined text-base"
+                        >check_circle</span
+                      >
+                      Dismissed
+                    </td>
+                    <td class="px-6 py-5 whitespace-nowrap text-center">
+                      <button
+                        onclick="alert('Viewing older log details...')"
+                        class="text-gray-400 hover:text-primary transition-colors p-1 rounded-md hover:bg-orange-50 dark:hover:bg-orange-900/20"
+                        title="View Details"
+                      >
+                        <span class="material-symbols-outlined text-lg"
+                          >visibility</span
+                        >
+                      </button>
+                    </td>
+                  </tr>
+
+                  <tr
+                    class="audit-row hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                    data-confidence="89"
+                    data-resolved="false"
+                  >
+                    <td
+                      class="px-6 py-5 whitespace-nowrap text-sm font-medium text-gray-600 dark:text-gray-400"
+                    >
+                      10:30:05 AM
+                    </td>
+                    <td
+                      class="px-6 py-5 whitespace-nowrap text-sm font-bold text-gray-700 dark:text-gray-300"
+                    >
+                      STU-210
+                    </td>
+                    <td class="px-6 py-5 whitespace-nowrap">
+                      <span
+                        class="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600 text-xs font-bold px-2.5 py-1 rounded-full"
+                        >Audio Anomaly</span
+                      >
+                    </td>
+                    <td class="px-6 py-5 whitespace-nowrap">
+                      <div class="flex items-center gap-3">
+                        <div class="confidence-bar">
+                          <div
+                            class="confidence-fill bg-warning"
+                            style="width: 89%"
+                          ></div>
+                        </div>
+                        <span class="text-sm font-bold text-gray-500">89%</span>
+                      </div>
+                    </td>
+                    <td class="px-6 py-5 whitespace-nowrap text-center">
+                      <label
+                        class="toggle-switch relative inline-flex items-center cursor-pointer justify-center"
+                      >
+                        <input type="checkbox" class="sr-only peer" />
+                        <div
+                          class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600"
+                        ></div>
+                      </label>
+                    </td>
+                    <td
+                      class="px-6 py-5 whitespace-nowrap text-sm font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1.5"
+                    >
+                      <span class="material-symbols-outlined text-base"
+                        >flag</span
+                      >
+                      Flagged for Review
+                    </td>
+                    <td class="px-6 py-5 whitespace-nowrap text-center">
+                      <button
+                        onclick="alert('Viewing older log details...')"
+                        class="text-gray-400 hover:text-primary transition-colors p-1 rounded-md hover:bg-orange-50 dark:hover:bg-orange-900/20"
+                        title="View Details"
+                      >
+                        <span class="material-symbols-outlined text-lg"
+                          >visibility</span
+                        >
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div
+              class="bg-white dark:bg-surface-dark px-6 py-4 border-t border-border-light dark:border-border-dark flex items-center justify-between"
+            >
+              <p
+                id="bottom-stats-text"
+                class="text-sm text-gray-500 dark:text-gray-400"
+              >
+                Showing
+                <strong class="text-gray-900 dark:text-white">0</strong> entries
+              </p>
+              <div class="flex items-center gap-1.5">
+                <button
+                  class="w-8 h-8 flex items-center justify-center rounded border border-border-light dark:border-border-dark text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50 transition-colors"
+                  disabled
+                >
+                  <span class="material-symbols-outlined text-sm"
+                    >chevron_left</span
+                  >
+                </button>
+                <button
+                  class="w-8 h-8 flex items-center justify-center rounded bg-primary text-white text-sm font-bold shadow-sm"
+                >
+                  1
+                </button>
+                <button
+                  class="w-8 h-8 flex items-center justify-center rounded border border-border-light dark:border-border-dark text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50 transition-colors"
+                  disabled
+                >
+                  <span class="material-symbols-outlined text-sm"
+                    >chevron_right</span
+                  >
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <div
+      id="student-modal"
+      class="hidden fixed inset-0 z-[70] flex items-center justify-center bg-gray-900/60 backdrop-blur-sm transition-all duration-300 p-4"
+    >
+      <div
+        class="bg-white dark:bg-surface-dark rounded-2xl shadow-2xl w-full max-w-5xl flex flex-col md:flex-row overflow-hidden max-h-[90vh]"
+      >
+        <div
+          class="w-full md:w-[60%] flex flex-col border-r border-border-light dark:border-border-dark"
+        >
+          <div
+            class="relative flex-1 bg-[#dcd0c3] min-h-[300px] flex items-center justify-center overflow-hidden"
+          >
+            <img
+              src="https://i.pravatar.cc/600?img=11"
+              class="object-cover w-full h-full opacity-80 mix-blend-multiply"
+              alt="Student Feed"
+            />
+
+            <div
+              id="modal-bounding-box"
+              class="absolute top-[40%] right-[25%] border-2 border-warning w-24 h-32 rounded-sm shadow-[0_0_15px_rgba(245,158,11,0.5)]"
+            >
+              <span
+                class="absolute -top-6 left-1/2 -translate-x-1/2 bg-warning text-white text-[10px] font-bold px-2 py-0.5 rounded whitespace-nowrap"
+                >ANOMALY DETECTED</span
+              >
+            </div>
+
+            <div class="absolute top-4 left-4 flex gap-2">
+              <div
+                class="bg-gray-900/60 text-white text-[10px] font-bold px-2 py-1 rounded backdrop-blur-sm"
+              >
+                Snapshot Review
+              </div>
+            </div>
+          </div>
+
+          <div class="h-48 bg-white dark:bg-surface-dark p-5 overflow-y-auto">
+            <h4
+              class="text-xs font-bold text-gray-500 flex items-center gap-2 mb-4 uppercase tracking-wider"
+            >
+              <span class="material-icons-outlined text-sm">history</span> Event
+              Log
+            </h4>
+            <div
+              id="modal-ai-log"
+              class="space-y-4 relative before:absolute before:inset-0 before:ml-2.5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-gray-200 before:to-transparent"
+            ></div>
+          </div>
+        </div>
+
+        <div
+          class="w-full md:w-[40%] bg-white dark:bg-surface-dark p-6 flex flex-col"
+        >
+          <div class="flex justify-between items-start mb-6">
+            <div>
+              <h2
+                id="modal-student-id"
+                class="text-2xl font-bold text-gray-900 dark:text-white"
+              >
+                STU----
+              </h2>
+              <div class="flex items-center gap-2 mt-1">
+                <span
+                  class="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-xs px-2 py-0.5 rounded font-medium"
+                  >Historical Record</span
+                >
+              </div>
+            </div>
+            <button
+              onclick="closeModal('student-modal')"
+              class="text-gray-400 hover:text-gray-600 dark:hover:text-white transition-colors"
+            >
+              <span class="material-icons-outlined pointer-events-none"
+                >close</span
+              >
+            </button>
+          </div>
+
+          <div class="mt-auto space-y-3">
+            <h4
+              class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3"
+            >
+              Audit Actions
+            </h4>
+            <button
+              onclick="
+                executeAction('Status updated to Resolved', 'student-modal')
+              "
+              class="w-full py-3 rounded-lg border border-border-light dark:border-border-dark font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center justify-center gap-2 transition-colors"
+            >
+              <span class="material-icons-outlined text-lg pointer-events-none"
+                >check_circle</span
+              >
+              Mark as Resolved
+            </button>
+            <button
+              onclick="
+                executeAction(
+                  'Flag escalated to Administration',
+                  'student-modal',
+                )
+              "
+              class="w-full py-3 rounded-lg bg-danger hover:bg-red-600 text-white font-bold flex items-center justify-center gap-2 transition-colors shadow-sm"
+            >
+              <span class="material-icons-outlined text-lg pointer-events-none"
+                >flag</span
+              >
+              Escalate Issue
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="../scripts/component-loader.js"></script>
+
+    <script>
+      // Modal Logic
+      function openModal(modalId) {
+        document.getElementById(modalId).classList.remove("hidden");
+      }
+      function closeModal(modalId) {
+        document.getElementById(modalId).classList.add("hidden");
+      }
+
+      function openStudentModal(studentId, status) {
+        document.getElementById("modal-student-id").innerText = studentId;
+        const boundingBox = document.getElementById("modal-bounding-box");
+        const aiLog = document.getElementById("modal-ai-log");
+
+        if (status === "vision") {
+          boundingBox.classList.remove("hidden");
+          boundingBox.innerHTML = `<span class="absolute -top-6 left-1/2 -translate-x-1/2 bg-warning text-white text-[10px] font-bold px-2 py-0.5 rounded whitespace-nowrap">ANOMALY DETECTED</span>`;
+          aiLog.innerHTML = `<div class="relative flex items-center justify-between group pl-8"><span class="absolute left-0 w-5 h-5 rounded-full border-4 border-white dark:border-surface-dark bg-warning"></span><div><h5 class="font-bold text-gray-900 dark:text-white text-sm">Visual Anomaly Logged</h5><p class="text-xs text-gray-500">Historical Snapshot</p></div></div>`;
+        } else if (status === "audio") {
+          boundingBox.classList.add("hidden");
+          aiLog.innerHTML = `<div class="relative flex items-center justify-between group pl-8"><span class="absolute left-0 w-5 h-5 rounded-full border-4 border-white dark:border-surface-dark bg-warning"></span><div><h5 class="font-bold text-gray-900 dark:text-white text-sm">Audio Anomaly Logged</h5><p class="text-xs text-gray-500">Historical Audio Clip</p></div></div>`;
+        }
+        openModal("student-modal");
+      }
+
+      function executeAction(message, modalId) {
+        alert(message);
+        closeModal(modalId);
+      }
+
+      // --- Smart Filtering Logic ---
+      const searchInput = document.getElementById("auditSearch");
+      const filterHighConf = document.getElementById("filter-high-conf");
+      const filterUnresolved = document.getElementById("filter-unresolved");
+      const rows = document.querySelectorAll(".audit-row");
+      const topStats = document.getElementById("top-stats-text");
+      const bottomStats = document.getElementById("bottom-stats-text");
+
+      function applyFilters() {
+        const term = searchInput.value.toLowerCase();
+        const highConfOnly = filterHighConf.checked;
+        const unresolvedOnly = filterUnresolved.checked;
+        let visibleCount = 0;
+
+        rows.forEach((row) => {
+          const text = row.innerText.toLowerCase();
+          const conf = parseInt(row.getAttribute("data-confidence") || "0");
+          const isResolved = row.getAttribute("data-resolved") === "true";
+
+          let matchSearch = text.includes(term);
+          let matchConf = highConfOnly ? conf > 90 : true;
+          let matchUnresolved = unresolvedOnly ? !isResolved : true;
+
+          if (matchSearch && matchConf && matchUnresolved) {
+            row.style.display = "table-row";
+            visibleCount++;
+          } else {
+            row.style.display = "none";
+          }
+        });
+
+        // Update Dynamic Numbers
+        if (topStats)
+          topStats.innerHTML = `Showing <strong class="text-gray-900 dark:text-white">${visibleCount}</strong> events`;
+        if (bottomStats)
+          bottomStats.innerHTML = `Showing <strong class="text-gray-900 dark:text-white">${visibleCount}</strong> of <strong class="text-gray-900 dark:text-white">${rows.length}</strong> total entries`;
+      }
+
+      // Attach Event Listeners
+      searchInput.addEventListener("input", applyFilters);
+      filterHighConf.addEventListener("change", applyFilters);
+      filterUnresolved.addEventListener("change", applyFilters);
+
+      // Run once on load to set initial numbers based on default checked states
+      applyFilters();
+    </script>
+  </body>
+</html>

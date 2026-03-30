@@ -89,6 +89,7 @@
                 >
                 <input
                   id="userId"
+                  onkeypress="handleEnter(event)"
                   class="w-full rounded-xl border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 pl-12 pr-4 h-14 focus:ring-primary focus:border-primary dark:text-white placeholder:text-slate-400"
                   placeholder="Enter your User ID"
                   type="text"
@@ -109,14 +110,19 @@
                 >
                 <input
                   id="password"
+                  onkeypress="handleEnter(event)"
                   class="w-full rounded-xl border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 pl-12 pr-12 h-14 focus:ring-primary focus:border-primary dark:text-white placeholder:text-slate-400"
                   placeholder="Enter your password"
                   type="password"
                 />
                 <button
+                  type="button"
+                  onclick="togglePassword()"
                   class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-primary transition-colors"
                 >
-                  <span class="material-symbols-outlined">visibility</span>
+                  <span id="toggleIcon" class="material-symbols-outlined"
+                    >visibility</span
+                  >
                 </button>
               </div>
             </label>
@@ -172,20 +178,38 @@
     </footer>
 
     <script>
+      // লগইন ফাংশন
       function handleLogin() {
-        // ইনপুট ফিল্ড থেকে ভ্যালু নেওয়া হচ্ছে
         const userIdValue = document.getElementById("userId").value;
         const passwordValue = document.getElementById("password").value;
 
-        // কন্ডিশন চেক করা হচ্ছে
         if (userIdValue === "123" && passwordValue === "123") {
-          // আইডি ও পাসওয়ার্ড ঠিক থাকলে ড্যাশবোর্ডে যাবে
           window.location.href = "dashboard-page.html";
         } else {
-          // ভুল হলে অ্যালার্ট দেখাবে
           alert(
             "Incorrect User ID or Password! Please use ID: 123 and Password: 123",
           );
+        }
+      }
+
+      // এন্টার চাপলে লগইন করার ফাংশন
+      function handleEnter(event) {
+        if (event.key === "Enter") {
+          handleLogin();
+        }
+      }
+
+      // পাসওয়ার্ড হাইড/শো করার ফাংশন
+      function togglePassword() {
+        const passwordInput = document.getElementById("password");
+        const toggleIcon = document.getElementById("toggleIcon");
+
+        if (passwordInput.type === "password") {
+          passwordInput.type = "text";
+          toggleIcon.innerText = "visibility_off"; // আইকন পরিবর্তন
+        } else {
+          passwordInput.type = "password";
+          toggleIcon.innerText = "visibility"; // আইকন পরিবর্তন
         }
       }
     </script>

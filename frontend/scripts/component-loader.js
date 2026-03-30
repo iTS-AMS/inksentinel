@@ -8,8 +8,26 @@ async function loadComponent(elementId, componentPath) {
     const placeholder = document.getElementById(elementId);
 
     if (placeholder) {
-      // outerHTML ব্যবহার করার কারণ হলো, এতে placeholder div টি মুছে গিয়ে একদম অরিজিনাল কোডটি বসবে, ডিজাইন ভাঙবে না।
       placeholder.outerHTML = htmlContent;
+
+      // ম্যাজিক: সাইডবার লোড হওয়ার পর অ্যাক্টিভ পেজের কালার চেঞ্জ করা
+      if (componentPath.includes("sidebar.html")) {
+        // বর্তমান পেজের নাম বের করা (যেমন: dashboard-page.html)
+        const currentPath =
+          window.location.pathname.split("/").pop() || "dashboard-page.html";
+        const navLinks = document.querySelectorAll("aside nav .nav-link");
+
+        navLinks.forEach((link) => {
+          const href = link.getAttribute("href");
+          if (href === currentPath) {
+            // বর্তমান পেজ হলে কমলা ব্যাকগ্রাউন্ড ও কালার সেট করবে
+            link.className =
+              "nav-link flex items-center gap-3 px-4 py-3 bg-orange-50 dark:bg-orange-900/20 text-primary font-bold rounded-xl group transition-colors";
+            const icon = link.querySelector(".material-icons-outlined");
+            if (icon) icon.classList.remove("text-gray-400");
+          }
+        });
+      }
     }
   } catch (error) {
     console.error("Error loading component:", error);
@@ -18,7 +36,6 @@ async function loadComponent(elementId, componentPath) {
 
 // When the document is fully loaded, fetch the components
 document.addEventListener("DOMContentLoaded", () => {
-  // এখানে আমরা "../components/" পাথ ব্যবহার করছি কারণ আমাদের HTML পেজগুলো "pages" ফোল্ডারের ভেতরে আছে
   if (document.getElementById("sidebar-placeholder")) {
     loadComponent("sidebar-placeholder", "../components/sidebar.html");
   }

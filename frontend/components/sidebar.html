@@ -1,80 +1,115 @@
 <aside
-  class="w-64 bg-surface-light dark:bg-surface-dark border-r border-border-light dark:border-border-dark flex flex-col h-full flex-shrink-0 transition-colors duration-200"
+  class="w-64 bg-surface-light dark:bg-surface-dark border-r border-border-light dark:border-border-dark flex flex-col justify-between h-full flex-shrink-0 transition-colors duration-200"
 >
-  <div class="p-6 flex items-center gap-3">
-    <div
-      class="bg-primary rounded-lg p-1.5 flex items-center justify-center shadow-sm"
-    >
-      <span class="material-icons-outlined text-white text-2xl">dashboard</span>
-    </div>
-    <div>
-      <h1 class="font-bold text-lg leading-tight text-gray-900 dark:text-white">
-        ExamNexus
-      </h1>
-      <p class="text-xs text-gray-500 dark:text-gray-400">Proctor Console</p>
-    </div>
-  </div>
-  <nav class="flex-1 px-4 py-4 space-y-1 overflow-y-auto">
-    <a
-      class="flex items-center gap-3 px-3 py-2.5 bg-orange-50 dark:bg-orange-900/20 text-primary font-medium rounded-lg group"
-      href="dashboard-page.html"
-    >
-      <span class="material-icons-outlined text-xl">grid_view</span>
-      Dashboard
-    </a>
-    <a
-      class="flex items-center gap-3 px-3 py-2.5 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white font-medium rounded-lg group transition-colors"
-      href="exam-setup-page.html"
-    >
-      <span class="material-icons-outlined text-xl">settings_suggest</span>
-      Exam Setup
-    </a>
-    <a
-      class="flex items-center gap-3 px-3 py-2.5 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white font-medium rounded-lg group transition-colors"
-      href="alert-monitor-page.html"
-    >
-      <span class="material-icons-outlined text-xl">warning_amber</span>
-      AI Alerts
-      <span
-        class="ml-auto bg-warning/20 text-warning text-xs font-bold px-2 py-0.5 rounded-full"
-        >2</span
-      >
-    </a>
-    <a
-      class="flex items-center gap-3 px-3 py-2.5 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white font-medium rounded-lg group transition-colors"
-      href="student-list-page.html"
-    >
-      <span class="material-icons-outlined text-xl">people_alt</span>
-      Student List
-    </a>
-    <a
-      class="flex items-center gap-3 px-3 py-2.5 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white font-medium rounded-lg group transition-colors"
-      href="audit-log-page.html"
-    >
-      <span class="material-icons-outlined text-xl">fact_check</span>
-      Audit Log
-    </a>
-    <div class="pt-4 mt-4 border-t border-border-light dark:border-border-dark">
-      <a
-        class="flex items-center gap-3 px-3 py-2.5 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white font-medium rounded-lg group transition-colors"
-        href="#"
-      >
-        <span class="material-icons-outlined text-xl">help_outline</span>
-        Help Center
-      </a>
-    </div>
-  </nav>
-  <div class="p-4 border-t border-border-light dark:border-border-dark">
-    <div
-      class="flex items-center gap-3 p-2 rounded-lg bg-gray-50 dark:bg-gray-800 border border-border-light dark:border-border-dark"
-    >
+  <div>
+    <div class="p-6 flex items-center gap-3">
       <div
-        class="bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 w-10 h-10 rounded-full flex items-center justify-center"
+        class="bg-primary rounded-lg p-1.5 flex items-center justify-center shadow-sm"
       >
-        <span class="material-symbols-outlined text-2xl">account_circle</span>
+        <span class="material-symbols-outlined text-white text-2xl"
+          >grid_view</span
+        >
+      </div>
+      <div>
+        <h1
+          class="font-bold text-lg leading-tight text-gray-900 dark:text-white"
+        >
+          ExamNexus
+        </h1>
+        <p
+          class="text-[10px] uppercase font-bold tracking-wider text-gray-500 dark:text-gray-400 mt-0.5"
+        >
+          Proctor Console
+        </p>
+      </div>
+    </div>
+
+    <nav class="px-4 py-2 space-y-1">
+      <a
+        class="nav-link flex items-center gap-3 px-4 py-3 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white font-medium rounded-xl group transition-colors"
+        href="dashboard-page.html"
+      >
+        <span
+          class="material-icons-outlined text-xl text-gray-400 group-hover:text-primary transition-colors"
+          >grid_view</span
+        >
+        Dashboard
+      </a>
+
+      <a
+        class="nav-link flex items-center gap-3 px-4 py-3 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white font-medium rounded-xl group transition-colors"
+        href="exam-setup-page.html"
+      >
+        <span
+          class="material-icons-outlined text-xl text-gray-400 group-hover:text-primary transition-colors"
+          >settings_suggest</span
+        >
+        Exam Setup
+      </a>
+
+      <a
+        class="nav-link flex items-center gap-3 px-4 py-3 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white font-medium rounded-xl group transition-colors"
+        href="alert-monitor-page.html"
+      >
+        <span
+          class="material-icons-outlined text-xl text-gray-400 group-hover:text-primary transition-colors"
+          >warning_amber</span
+        >
+        AI Alerts
+        <span
+          class="ml-auto bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 text-xs font-bold px-2 py-0.5 rounded-full"
+          >2</span
+        >
+      </a>
+
+      <a
+        class="nav-link flex items-center gap-3 px-4 py-3 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white font-medium rounded-xl group transition-colors"
+        href="student-list-page.html"
+      >
+        <span
+          class="material-icons-outlined text-xl text-gray-400 group-hover:text-primary transition-colors"
+          >people_alt</span
+        >
+        Student List
+      </a>
+
+      <a
+        class="nav-link flex items-center gap-3 px-4 py-3 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white font-medium rounded-xl group transition-colors"
+        href="audit-log-page.html"
+      >
+        <span
+          class="material-icons-outlined text-xl text-gray-400 group-hover:text-primary transition-colors"
+          >fact_check</span
+        >
+        Audit Log
+      </a>
+
+      <div class="pt-4 mt-4 border-t border-gray-100 dark:border-gray-800">
+        <a
+          class="nav-link flex items-center gap-3 px-4 py-3 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white font-medium rounded-xl group transition-colors"
+          href="settings-page.html"
+        >
+          <span
+            class="material-icons-outlined text-xl text-gray-400 group-hover:text-primary transition-colors"
+            >settings</span
+          >
+          Settings
+        </a>
+      </div>
+    </nav>
+  </div>
+
+  <div
+    class="p-4 mb-4 mx-4 border border-gray-100 dark:border-gray-800 rounded-xl bg-gray-50/50 dark:bg-gray-800/50 flex items-center justify-between"
+  >
+    <div class="flex items-center gap-3 overflow-hidden">
+      <div
+        class="bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 w-10 h-10 rounded-full flex items-center justify-center shrink-0"
+      >
+        <span class="material-icons-outlined">account_circle</span>
       </div>
       <div class="overflow-hidden">
-        <p class="text-sm font-semibold text-gray-900 dark:text-white truncate">
+        <p class="text-sm font-bold text-gray-900 dark:text-white truncate">
           Anik Sinha
         </p>
         <p class="text-xs text-gray-500 dark:text-gray-400 truncate">
@@ -82,5 +117,12 @@
         </p>
       </div>
     </div>
+    <button
+      onclick="window.location.href = 'login-page.html'"
+      title="Logout"
+      class="text-gray-400 hover:text-danger dark:hover:text-danger transition-colors p-1 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 shrink-0"
+    >
+      <span class="material-icons-outlined">logout</span>
+    </button>
   </div>
 </aside>
