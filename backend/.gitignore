@@ -1,0 +1,13 @@
+# dependencies
+node_modules/
+
+# environment variables — NEVER commit this
+.env
+
+# logs
+npm-debug.log*
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db

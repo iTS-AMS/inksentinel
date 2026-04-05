@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Proctor — Session</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div class="layout">
+  <div id="sidebar"></div>
+
+  <main class="main">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Session Overview</div>
+        <div class="page-sub">Real-time exam monitoring statistics</div>
+      </div>
+      <span style="font-size:10px;color:var(--t3);letter-spacing:0.06em">
+        Auto-refreshes every 10s
+      </span>
+    </div>
+
+    <!-- KPI row -->
+    <div class="kpi-row">
+      <div class="card kpi-card">
+        <div class="kpi-val" style="color:var(--green)" id="kpi-live">—</div>
+        <div class="kpi-lbl">Live Feeds</div>
+      </div>
+      <div class="card kpi-card">
+        <div class="kpi-val" style="color:var(--red)" id="kpi-alerts">—</div>
+        <div class="kpi-lbl">Total Alerts</div>
+      </div>
+      <div class="card kpi-card">
+        <div class="kpi-val" style="color:var(--amber)" id="kpi-flagged">—</div>
+        <div class="kpi-lbl">Flagged</div>
+      </div>
+      <div class="card kpi-card">
+        <div class="kpi-val" style="color:var(--accent)" id="kpi-clear">—</div>
+        <div class="kpi-lbl">Clear</div>
+      </div>
+    </div>
+
+    <!-- Charts row -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+
+      <div class="card">
+        <div class="card-title">Alerts Per Candidate</div>
+        <div id="bar-chart" style="display:flex;flex-direction:column;gap:10px"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Detection Types</div>
+        <div id="class-chart" style="display:flex;flex-direction:column;gap:10px"></div>
+      </div>
+
+    </div>
+
+    <!-- Candidate summary table -->
+    <div class="card">
+      <div class="card-title">Candidate Summary</div>
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Candidate</th>
+            <th>Status</th>
+            <th>Alert Count</th>
+            <th>Risk Level</th>
+          </tr>
+        </thead>
+        <tbody id="candidate-table"></tbody>
+      </table>
+    </div>
+
+  </main>
+</div>
+
+<script src="/js/nav.js"></script>
+<script>
+  document.getElementById('sidebar').innerHTML = buildSidebar();
+
+  async function loadStats() {
+    const data = await api('/api/stats');
+    if (!data) return;
+
+    // KPIs
+    document.getElementById('kpi-live').textContent    = data.liveFeeds;
+    document.getElementById('kpi-alerts').textContent  = data.totalAlerts;
+    document.getElementById('kpi-flagged').textContent = data.flaggedFeeds;
+    document.getElementById('kpi-clear').textContent   = data.liveFeeds - data.flaggedFeeds;
+
+    // alerts per candidate bar chart
+    const maxAlerts = Math.max(...data.byFeed.map(f => f.alerts), 1);
+    document.getElementById('bar-chart').innerHTML = data.byFeed.map(f => `
+      <div style="display:grid;grid-template-columns:80px 1fr 30px;
+        align-items:center;gap:10px">
+        <span style="font-size:11px;color:var(--t2)">${f.label}</span>
+        <div style="height:6px;background:var(--raised);border-radius:3px;overflow:hidden">
+          <div style="height:100%;width:${(f.alerts/maxAlerts)*100}%;
+            background:var(--red);border-radius:3px;transition:width 0.4s ease"></div>
+        </div>
+        <span style="font-size:11px;color:${f.alerts>0?'var(--red)':'var(--t3)'};
+          text-align:right">${f.alerts}</span>
+      </div>`).join('');
+
+    // detection types bar chart
+    const classes   = Object.entries(data.byClass);
+    const maxClass  = Math.max(...classes.map(([,v]) => v), 1);
+    document.getElementById('class-chart').innerHTML = classes.length === 0
+      ? '<div style="color:var(--t3);font-size:12px">No detections yet</div>'
+      : classes.map(([cls, count]) => `
+          <div style="display:grid;grid-template-columns:90px 1fr 30px;
+            align-items:center;gap:10px">
+            <span style="font-size:11px;color:var(--t2)">${cls}</span>
+            <div style="height:6px;background:var(--raised);border-radius:3px;overflow:hidden">
+              <div style="height:100%;width:${(count/maxClass)*100}%;
+                background:var(--amber);border-radius:3px;transition:width 0.4s ease"></div>
+            </div>
+            <span style="font-size:11px;color:var(--amber);text-align:right">${count}</span>
+          </div>`).join('');
+
+    // candidate summary table
+    document.getElementById('candidate-table').innerHTML = data.byFeed.map(f => {
+      const risk      = f.alerts === 0 ? 'CLEAR' : f.alerts < 4 ? 'MODERATE' : 'HIGH';
+      const riskClass = f.alerts === 0 ? 'badge-live' : f.alerts < 4 ? 'badge-warn' : 'badge-alert';
+      return `<tr>
+        <td style="font-weight:500">${f.label}</td>
+        <td>
+          <span class="badge ${f.connected ? 'badge-live' : 'badge-off'}">
+            ● ${f.connected ? 'LIVE' : 'OFFLINE'}
+          </span>
+        </td>
+        <td style="color:${f.alerts>0?'var(--red)':'var(--t2)'}">${f.alerts}</td>
+        <td><span class="badge ${riskClass}">${risk}</span></td>
+      </tr>`;
+    }).join('');
+  }
+
+  loadStats();
+  setInterval(loadStats, 10000);
+</script>
+</body>
+</html>

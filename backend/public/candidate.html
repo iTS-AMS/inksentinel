@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Proctor — Candidate</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div class="layout">
+  <div id="sidebar"></div>
+
+  <main class="main">
+    <div class="breadcrumb">
+      <a href="/dashboard">← Dashboard</a>
+      <span>/</span>
+      <span id="crumb-label">Loading...</span>
+    </div>
+
+    <div class="profile-grid">
+
+      <!-- Left: video + detection log + signal history -->
+      <div>
+        <div class="video-large" id="video-wrap">
+          <div class="feed-placeholder">
+            <div class="feed-icon">◈</div>
+            <div class="feed-status-text" id="video-status">LOADING...</div>
+          </div>
+
+          <div class="video-top-bar">
+            <div class="feed-badge live" id="live-badge">
+              <span class="feed-dot"></span> LIVE
+            </div>
+            <div id="video-label" style="
+              background:rgba(7,8,13,0.7);backdrop-filter:blur(4px);
+              padding:4px 10px;border-radius:4px;
+              font-family:var(--fd);font-weight:700;
+              font-size:14px;letter-spacing:0.08em">—
+            </div>
+          </div>
+
+          <div class="alert-banner" id="alert-banner" style="display:none">
+            ⚠ SUSPICIOUS ACTIVITY DETECTED
+          </div>
+        </div>
+
+        <!-- Detection log -->
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-title">Detection Log</div>
+          <div id="detection-log" style="max-height:220px;overflow-y:auto">
+            <div style="color:var(--t3);font-size:12px">Loading...</div>
+          </div>
+        </div>
+
+        <!-- Signal history — below detection log -->
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+            <div class="card-title" style="margin-bottom:0">Signal History</div>
+            <button class="btn btn-ghost" style="font-size:10px;padding:4px 10px"
+              onclick="clearSignalLog()">Clear</button>
+          </div>
+          <div id="signal-log" style="max-height:200px;overflow-y:auto">
+            <div style="color:var(--t3);font-size:12px">No signals sent yet</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: info + signal controls -->
+      <div style="display:flex;flex-direction:column;gap:16px">
+
+        <div class="card">
+          <div class="card-title">Feed Info</div>
+          <div id="info-rows"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Exam Controls</div>
+          <p style="font-size:11px;color:var(--t3);margin-bottom:14px">
+            Global commands sent to all pen units.
+          </p>
+
+          <div class="signal-group">
+            <div class="signal-label">Timer</div>
+            <div style="display:flex;gap:6px;margin-bottom:6px">
+              <input class="input" type="number" id="duration-input"
+                placeholder="Minutes" min="1" style="width:120px">
+              <button class="btn btn-ghost" onclick="sendTimer()">Set Timer</button>
+            </div>
+          </div>
+
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px">
+            <button class="btn btn-green"  onclick="sendCmd('start')">▶ Start</button>
+            <button class="btn btn-ghost"  onclick="sendCmd('pause')">⏸ Pause</button>
+            <button class="btn btn-danger" onclick="sendCmd('end')">⏹ End</button>
+            <button class="btn btn-ghost"  onclick="sendCmd('reset')">↺ Reset</button>
+          </div>
+
+          <hr class="divider">
+
+          <div class="signal-group">
+            <div class="signal-label">Unit Actions</div>
+            <p style="font-size:11px;color:var(--t3);margin-bottom:10px">
+              Target a specific pen unit by ID.
+            </p>
+
+            <div style="display:flex;gap:6px;margin-bottom:10px">
+              <input class="input" type="number" id="unit-id"
+                placeholder="Unit ID" min="1" style="width:100px">
+            </div>
+
+            <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">
+              <button class="btn btn-warn"  onclick="sendUnit('warn')">⚠ Warn</button>
+              <button class="btn btn-green" onclick="sendUnit('enable')">✓ Enable</button>
+            </div>
+
+            <div class="signal-group">
+              <div class="signal-label">Disable</div>
+              <div style="display:flex;gap:6px;margin-bottom:4px">
+                <input class="input" type="number" id="punish-input"
+                  placeholder="Penalty (s) — optional" min="0">
+                <button class="btn btn-danger" onclick="sendDisable()">Disable</button>
+              </div>
+            </div>
+
+            <div class="signal-group">
+              <div class="signal-label">Deduct Time</div>
+              <div style="display:flex;gap:6px">
+                <input class="input" type="number" id="deduct-input"
+                  placeholder="Seconds to deduct" min="1">
+                <button class="btn btn-danger" onclick="sendDeduct()">Deduct</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="/js/nav.js"></script>
+<script>
+  document.getElementById('sidebar').innerHTML = buildSidebar();
+
+  const feedId  = window.location.pathname.split('/')[2];
+  let signalLog = [];
+
+  async function loadFeed() {
+    const data = await api(`/api/feeds/${feedId}`);
+    if (!data) return;
+
+    document.getElementById('crumb-label').textContent = data.label;
+    document.getElementById('video-label').textContent = data.label;
+    document.getElementById('video-status').textContent =
+      data.connected ? 'LIVE FEED (DEMO)' : 'CAMERA OFFLINE';
+
+    const badge = document.getElementById('live-badge');
+    if (data.connected) {
+      badge.className = 'feed-badge live';
+      badge.innerHTML = '<span class="feed-dot"></span> LIVE';
+    } else {
+      badge.className = 'feed-badge offline';
+      badge.innerHTML = 'OFFLINE';
+    }
+
+    const hasAlert = data.detections && data.detections.length > 0;
+    document.getElementById('video-wrap').className =
+      `video-large ${hasAlert ? 'alert' : ''}`;
+    document.getElementById('alert-banner').style.display =
+      hasAlert ? 'block' : 'none';
+
+    document.getElementById('info-rows').innerHTML = [
+      { label: 'Feed ID',     value: `#${data.id}` },
+      { label: 'Label',       value: data.label },
+      { label: 'Status',      value: data.connected ? 'Connected' : 'Offline',
+        color: data.connected ? 'var(--green)' : 'var(--red)' },
+      { label: 'Total Flags', value: data.detections?.length || 0,
+        color: data.detections?.length > 0 ? 'var(--amber)' : 'var(--t1)' },
+    ].map(r => `
+      <div class="info-row">
+        <span class="info-label">${r.label}</span>
+        <span style="color:${r.color||'var(--t1)'};font-weight:500">${r.value}</span>
+      </div>`).join('');
+
+    const log = document.getElementById('detection-log');
+    if (!data.detections || data.detections.length === 0) {
+      log.innerHTML = '<div style="color:var(--t3);font-size:12px">No detections</div>';
+    } else {
+      log.innerHTML = data.detections.map(d => `
+        <div style="display:flex;justify-content:space-between;align-items:center;
+          padding:6px 0;border-bottom:1px solid rgba(0,212,255,0.05)">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="width:6px;height:6px;border-radius:50%;
+              background:var(--red);display:inline-block;flex-shrink:0"></span>
+            <span style="font-size:11px;padding:2px 6px;background:var(--rdim);
+              color:var(--red);border-radius:2px;letter-spacing:0.06em">
+              ${d.class_label}
+            </span>
+            <span style="font-size:11px;color:var(--amber)">
+              ${(d.confidence*100).toFixed(0)}%
+            </span>
+          </div>
+          <span style="font-size:10px;color:var(--t3)">
+            ${new Date(d.detected_at).toLocaleTimeString()}
+          </span>
+        </div>`).join('');
+    }
+  }
+
+  // ── Signal helpers ──────────────────────────────────────
+
+  async function postSignal(body) {
+    const res  = await fetch('/api/signal', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(body)
+    });
+    const data = await res.json();
+
+    if (res.ok || res.status === 202) {
+      addSignalLog(body, false);
+    } else {
+      addSignalLog(body, true, data.error);
+    }
+  }
+
+  function sendCmd(cmd) { postSignal({ cmd }); }
+
+  function sendTimer() {
+    const mins = parseInt(document.getElementById('duration-input').value);
+    if (!mins || mins <= 0) { addSignalLog(null, true, 'Enter minutes for timer'); return; }
+    postSignal({ cmd: 'timer', duration_ms: mins * 60 * 1000 });
+  }
+
+  function getUnitId() {
+    const id = parseInt(document.getElementById('unit-id').value);
+    if (!id || id <= 0) { addSignalLog(null, true, 'Enter a unit ID'); return null; }
+    return id;
+  }
+
+  function sendUnit(cmd) {
+    const device_id = getUnitId();
+    if (!device_id) return;
+    postSignal({ cmd, device_id });
+  }
+
+  function sendDisable() {
+    const device_id = getUnitId();
+    if (!device_id) return;
+    const secs = parseInt(document.getElementById('punish-input').value) || 0;
+    const body = { cmd: 'disable', device_id };
+    if (secs > 0) body.punish_ms = secs * 1000;
+    postSignal(body);
+  }
+
+  function sendDeduct() {
+    const device_id = getUnitId();
+    if (!device_id) return;
+    const secs = parseInt(document.getElementById('deduct-input').value);
+    if (!secs || secs <= 0) { addSignalLog(null, true, 'Enter seconds to deduct'); return; }
+    postSignal({ cmd: 'deduct', device_id, time_ms: secs * 1000 });
+  }
+
+  function addSignalLog(body, isError, errorMsg) {
+    const text = isError
+      ? `ERROR: ${errorMsg}`
+      : JSON.stringify(body);
+
+    signalLog.unshift({
+      text,
+      time: new Date().toLocaleTimeString(),
+      isError
+    });
+    renderSignalLog();
+  }
+
+  function renderSignalLog() {
+    const el = document.getElementById('signal-log');
+    if (signalLog.length === 0) {
+      el.innerHTML = '<div style="color:var(--t3);font-size:12px">No signals sent yet</div>';
+      return;
+    }
+    el.innerHTML = signalLog.slice(0, 30).map((s, i) => `
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;
+        padding:6px 0;border-bottom:1px solid rgba(0,212,255,0.04)">
+        <div style="display:flex;align-items:flex-start;gap:8px;flex:1">
+          <span style="font-size:10px;color:var(--t3);flex-shrink:0;margin-top:1px">
+            ${signalLog.length - i}
+          </span>
+          <span style="font-size:11px;color:${s.isError ? 'var(--red)' : 'var(--accent)'};
+            word-break:break-all;letter-spacing:0.04em">${s.text}</span>
+        </div>
+        <span style="font-size:10px;color:var(--t3);flex-shrink:0;margin-left:8px">
+          ${s.time}
+        </span>
+      </div>`).join('');
+  }
+
+  function clearSignalLog() {
+    signalLog = [];
+    renderSignalLog();
+  }
+
+  loadFeed();
+</script>
+</body>
+</html>

@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Proctor — Incidents</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div class="layout">
+  <div id="sidebar"></div>
+
+  <main class="main">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Incident Log</div>
+        <div class="page-sub">Full audit trail of all flagged detections</div>
+      </div>
+      <button class="btn btn-ghost" onclick="exportCSV()">↓ Export CSV</button>
+    </div>
+
+    <!-- Filters -->
+    <div class="filter-bar">
+      <div class="filter-group">
+        <label>Feed</label>
+        <select class="input" id="filter-feed"
+          style="padding:7px 10px;font-size:12px">
+          <option value="all">All feeds</option>
+          <option value="1">Seat 01</option>
+          <option value="2">Seat 02</option>
+          <option value="3">Seat 03</option>
+          <option value="4">Seat 04</option>
+          <option value="5">Seat 05</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Detection Type</label>
+        <select class="input" id="filter-class"
+          style="padding:7px 10px;font-size:12px">
+          <option value="all">All types</option>
+          <option value="phone">phone</option>
+          <option value="cell phone">cell phone</option>
+          <option value="person">person</option>
+          <option value="book">book</option>
+        </select>
+      </div>
+      <button class="btn btn-ghost" style="align-self:flex-end"
+        onclick="loadIncidents()">
+        ⟳ Apply
+      </button>
+    </div>
+
+    <!-- Table -->
+    <div class="card" style="padding:0;overflow:hidden">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Time</th>
+            <th>Candidate</th>
+            <th>Detection</th>
+            <th>Confidence</th>
+            <th>Severity</th>
+          </tr>
+        </thead>
+        <tbody id="incident-table">
+          <tr>
+            <td colspan="6"
+              style="color:var(--t3);text-align:center">Loading...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </main>
+</div>
+
+<script src="/js/nav.js"></script>
+<script>
+  document.getElementById('sidebar').innerHTML = buildSidebar();
+
+  let currentData = [];
+
+  async function loadIncidents() {
+    const feedId     = document.getElementById('filter-feed').value;
+    const classLabel = document.getElementById('filter-class').value;
+
+    const params = new URLSearchParams();
+    if (feedId     !== 'all') params.set('feedId',     feedId);
+    if (classLabel !== 'all') params.set('classLabel', classLabel);
+
+    const data = await api(`/api/incidents?${params}`);
+    if (!data) return;
+
+    currentData = data.incidents;
+    renderTable(currentData);
+  }
+
+  function renderTable(rows) {
+    const tbody = document.getElementById('incident-table');
+
+    if (rows.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="6"
+            style="color:var(--t3);text-align:center;padding:32px">
+            No incidents found
+          </td>
+        </tr>`;
+      return;
+    }
+
+    tbody.innerHTML = rows.map((inc, i) => {
+      const conf     = inc.confidence;
+      const severity = conf >= 0.85 ? 'HIGH' : conf >= 0.65 ? 'MODERATE' : 'LOW';
+      const sevClass = conf >= 0.85 ? 'badge-alert' : conf >= 0.65 ? 'badge-warn' : 'badge-live';
+      const time     = new Date(inc.detected_at);
+
+      return `<tr>
+        <td style="color:var(--t3)">${i + 1}</td>
+        <td style="color:var(--t2)">
+          ${time.toLocaleTimeString()}
+          <span style="color:var(--t3);font-size:10px;margin-left:4px">
+            ${time.toLocaleDateString()}
+          </span>
+        </td>
+        <td style="font-weight:500">${inc.feed_label}</td>
+        <td>
+          <span style="padding:2px 8px;background:var(--rdim);color:var(--red);
+            border-radius:2px;font-size:11px;letter-spacing:0.06em">
+            ${inc.class_label}
+          </span>
+        </td>
+        <td style="color:${conf>=0.8?'var(--red)':'var(--amber)'}">
+          ${(conf*100).toFixed(1)}%
+        </td>
+        <td><span class="badge ${sevClass}">${severity}</span></td>
+      </tr>`;
+    }).join('');
+  }
+
+  function exportCSV() {
+    if (currentData.length === 0) return;
+    const headers = ['#','Time','Candidate','Detection','Confidence'];
+    const rows    = currentData.map((inc, i) => [
+      i + 1,
+      new Date(inc.detected_at).toISOString(),
+      inc.feed_label,
+      inc.class_label,
+      (inc.confidence * 100).toFixed(2) + '%'
+    ]);
+    const csv  = [headers, ...rows].map(r => r.join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = `incidents_${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  loadIncidents();
+</script>
+</body>
+</html>

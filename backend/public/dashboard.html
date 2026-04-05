@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Proctor — Dashboard</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    /* checkbox on feed cards */
+    .feed-card { position: relative; }
+    .feed-check {
+      position: absolute; top: 8px; right: 8px;
+      width: 18px; height: 18px;
+      accent-color: var(--accent);
+      cursor: pointer;
+      z-index: 10;
+    }
+    .feed-card.selected {
+      border-color: var(--accent);
+      box-shadow: 0 0 20px rgba(0,212,255,0.2);
+    }
+
+    /* command panel */
+    .cmd-panel {
+      margin-top: 24px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+    .cmd-panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .cmd-panel-title {
+      font-family: var(--fd);
+      font-weight: 700;
+      font-size: 13px;
+      letter-spacing: 0.10em;
+      color: var(--t2);
+      text-transform: uppercase;
+    }
+    .selected-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      padding: 12px 20px;
+      border-bottom: 1px solid var(--border);
+      min-height: 48px;
+      align-items: center;
+    }
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 10px;
+      background: var(--adim);
+      border: 1px solid rgba(0,212,255,0.25);
+      border-radius: 3px;
+      font-size: 11px;
+      color: var(--accent);
+      letter-spacing: 0.05em;
+    }
+    .chip button {
+      background: none;
+      border: none;
+      color: var(--t3);
+      cursor: pointer;
+      font-size: 11px;
+      padding: 0;
+      line-height: 1;
+      font-family: var(--fm);
+    }
+    .chip button:hover { color: var(--red); }
+    .cmd-panel-body {
+      padding: 16px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .cmd-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+    .cmd-section-label {
+      font-size: 10px;
+      letter-spacing: 0.10em;
+      color: var(--t3);
+      text-transform: uppercase;
+      width: 100%;
+      margin-bottom: -4px;
+    }
+    .cmd-result {
+      padding: 10px 20px;
+      border-top: 1px solid var(--border);
+      font-size: 11px;
+      color: var(--t2);
+      font-family: var(--fm);
+      max-height: 120px;
+      overflow-y: auto;
+    }
+    .cmd-result-line {
+      padding: 3px 0;
+      border-bottom: 1px solid rgba(0,212,255,0.04);
+    }
+  </style>
+</head>
+<body>
+<div class="layout">
+  <div id="sidebar"></div>
+
+  <main class="main">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Live Feeds</div>
+        <div class="page-sub" id="feed-summary">Loading...</div>
+      </div>
+
+      <div style="display:flex;gap:6px;align-items:center">
+        <!-- selection controls -->
+        <button class="btn btn-ghost" onclick="selectAll()">Select All</button>
+        <button class="btn btn-ghost" onclick="deselectAll()">Deselect</button>
+        <hr style="width:1px;height:20px;border:none;border-left:1px solid var(--border)">
+        <!-- feed filter -->
+        <button class="btn btn-ghost" id="filter-all"   onclick="setFilter('all')">All</button>
+        <button class="btn btn-ghost" id="filter-live"  onclick="setFilter('live')">Live</button>
+        <button class="btn btn-ghost" id="filter-alert" onclick="setFilter('alert')">Alerts</button>
+      </div>
+    </div>
+
+    <!-- Feed grid -->
+    <div class="feed-grid" id="feed-grid">
+      <div style="color:var(--t3);font-size:12px">Loading feeds...</div>
+    </div>
+
+    <!-- Multi-candidate command panel -->
+    <div class="cmd-panel" id="cmd-panel">
+      <div class="cmd-panel-header">
+        <span class="cmd-panel-title">
+          Send Command
+          <span id="selected-count"
+            style="color:var(--accent);margin-left:6px">— select candidates above</span>
+        </span>
+        <button class="btn btn-ghost" style="font-size:10px;padding:4px 10px"
+          onclick="deselectAll()">Clear selection</button>
+      </div>
+
+      <!-- Selected candidate chips -->
+      <div class="selected-chips" id="selected-chips">
+        <span style="font-size:11px;color:var(--t3)">
+          Check boxes on feed cards to select candidates
+        </span>
+      </div>
+
+      <!-- Command inputs -->
+      <div class="cmd-panel-body">
+
+        <!-- Global commands -->
+        <div class="cmd-row">
+          <span class="cmd-section-label">Global — applies to all pen units</span>
+          <button class="btn btn-green"  onclick="bulkCmd('start')">▶ Start</button>
+          <button class="btn btn-ghost"  onclick="bulkCmd('pause')">⏸ Pause</button>
+          <button class="btn btn-danger" onclick="bulkCmd('end')">⏹ End</button>
+          <button class="btn btn-ghost"  onclick="bulkCmd('reset')">↺ Reset</button>
+        </div>
+
+        <!-- Timer -->
+        <div class="cmd-row">
+          <span class="cmd-section-label">Set Timer</span>
+          <input class="input" type="number" id="bulk-duration"
+            placeholder="Minutes" min="1"
+            style="width:120px">
+          <button class="btn btn-ghost" onclick="bulkTimer()">Set Timer</button>
+        </div>
+
+        <hr class="divider" style="margin:0">
+
+        <!-- Per-unit commands -->
+        <div class="cmd-row">
+          <span class="cmd-section-label">Unit actions — enter unit ID</span>
+          <input class="input" type="number" id="bulk-unit-id"
+            placeholder="Unit ID" min="1"
+            style="width:100px">
+          <button class="btn btn-warn"  onclick="bulkUnit('warn')">⚠ Warn</button>
+          <button class="btn btn-green" onclick="bulkUnit('enable')">✓ Enable</button>
+        </div>
+
+        <!-- Disable -->
+        <div class="cmd-row">
+          <span class="cmd-section-label">Disable unit</span>
+          <input class="input" type="number" id="bulk-punish"
+            placeholder="Penalty (s) — optional" min="0"
+            style="width:200px">
+          <button class="btn btn-danger" onclick="bulkDisable()">Disable</button>
+        </div>
+
+        <!-- Deduct -->
+        <div class="cmd-row">
+          <span class="cmd-section-label">Deduct time from unit</span>
+          <input class="input" type="number" id="bulk-deduct"
+            placeholder="Seconds to deduct" min="1"
+            style="width:200px">
+          <button class="btn btn-danger" onclick="bulkDeduct()">Deduct</button>
+        </div>
+
+      </div>
+
+      <!-- Result log -->
+      <div class="cmd-result" id="cmd-result">
+        <div style="color:var(--t3)">Command results will appear here</div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script src="/js/nav.js"></script>
+<script>
+  document.getElementById('sidebar').innerHTML = buildSidebar();
+
+  let allFeeds     = [];
+  let selectedIds  = new Set();
+  let activeFilter = 'all';
+  let cmdResults   = [];
+
+  // ── Feed loading ────────────────────────────────────────
+
+  async function loadFeeds() {
+    const data = await api('/api/feeds');
+    if (!data) return;
+    allFeeds = data;
+    renderFeeds();
+  }
+
+  function setFilter(f) {
+    activeFilter = f;
+    ['all','live','alert'].forEach(key => {
+      const btn = document.getElementById(`filter-${key}`);
+      btn.style.background  = key === f ? 'var(--adim)' : '';
+      btn.style.color       = key === f ? 'var(--accent)' : '';
+      btn.style.borderColor = key === f ? 'var(--accent)' : '';
+    });
+    renderFeeds();
+  }
+
+  function renderFeeds() {
+    const liveCount  = allFeeds.filter(f => f.connected).length;
+    const alertCount = allFeeds.filter(f => Number(f.alert_count) > 0).length;
+
+    document.getElementById('feed-summary').textContent =
+      `${liveCount} connected · ${alertCount} flagged · ${selectedIds.size} selected`;
+
+    let filtered = allFeeds;
+    if (activeFilter === 'live')  filtered = allFeeds.filter(f => f.connected);
+    if (activeFilter === 'alert') filtered = allFeeds.filter(f => Number(f.alert_count) > 0);
+
+    const grid = document.getElementById('feed-grid');
+
+    if (filtered.length === 0) {
+      grid.innerHTML = `<div style="color:var(--t3);font-size:12px;padding:40px 0">
+        No feeds match this filter</div>`;
+      return;
+    }
+
+    grid.innerHTML = filtered.map(feed => {
+      const alerts    = Number(feed.alert_count);
+      const hasAlert  = alerts > 0;
+      const isLive    = feed.connected;
+      const isSelected = selectedIds.has(feed.id);
+
+      const badgeClass = !isLive ? 'offline' : hasAlert ? 'alert' : 'live';
+      const badgeText  = !isLive ? 'OFFLINE'  : hasAlert ? 'ALERT'  : 'LIVE';
+      const cardClass  = !isLive ? 'offline'  : hasAlert ? 'alert'  : '';
+
+      return `
+        <div class="feed-card ${cardClass} ${isSelected ? 'selected' : ''}"
+          id="card-${feed.id}">
+
+          <!-- checkbox — stops click from navigating to candidate page -->
+          <input type="checkbox" class="feed-check"
+            ${isSelected ? 'checked' : ''}
+            onclick="event.stopPropagation();toggleSelect(${feed.id}, '${feed.label}')"
+            title="Select for bulk command">
+
+          <!-- clicking the card body goes to candidate page -->
+          <a href="/candidate/${feed.id}"
+            style="text-decoration:none;color:inherit;display:block">
+            <div class="feed-video">
+              <div class="feed-placeholder">
+                <div class="feed-icon">◈</div>
+                <div class="feed-status-text">
+                  ${isLive ? 'LIVE FEED' : 'OFFLINE'}
+                </div>
+              </div>
+              <div class="feed-badge ${badgeClass}">
+                ${isLive ? '<span class="feed-dot"></span>' : ''}
+                ${badgeText}
+              </div>
+            </div>
+            <div class="feed-footer">
+              <div class="feed-name">${feed.label}</div>
+              ${hasAlert
+                ? `<div class="feed-flags">${alerts} flag${alerts>1?'s':''}</div>`
+                : `<div style="font-size:10px;color:var(--t3)">Clear</div>`}
+            </div>
+          </a>
+        </div>`;
+    }).join('');
+  }
+
+  // ── Selection ───────────────────────────────────────────
+
+  function toggleSelect(id, label) {
+    if (selectedIds.has(id)) {
+      selectedIds.delete(id);
+    } else {
+      selectedIds.add(id);
+    }
+    renderFeeds();
+    renderChips();
+  }
+
+  function selectAll() {
+    allFeeds.forEach(f => selectedIds.add(f.id));
+    renderFeeds();
+    renderChips();
+  }
+
+  function deselectAll() {
+    selectedIds.clear();
+    renderFeeds();
+    renderChips();
+  }
+
+  function renderChips() {
+    const container = document.getElementById('selected-chips');
+    const count     = document.getElementById('selected-count');
+
+    if (selectedIds.size === 0) {
+      count.textContent = '— select candidates above';
+      container.innerHTML = `<span style="font-size:11px;color:var(--t3)">
+        Check boxes on feed cards to select candidates</span>`;
+      return;
+    }
+
+    count.textContent = `${selectedIds.size} selected`;
+
+    container.innerHTML = [...selectedIds].map(id => {
+      const feed = allFeeds.find(f => f.id === id);
+      const label = feed ? feed.label : `Feed ${id}`;
+      return `
+        <div class="chip">
+          <span>${label}</span>
+          <button onclick="toggleSelect(${id}, '${label}')" title="Remove">✕</button>
+        </div>`;
+    }).join('');
+  }
+
+  // ── Bulk commands ───────────────────────────────────────
+
+  function getSelectedFeeds() {
+    if (selectedIds.size === 0) {
+      addResult('ERROR: No candidates selected', true);
+      return null;
+    }
+    return [...selectedIds];
+  }
+
+  async function bulkCmd(cmd) {
+    const ids = getSelectedFeeds();
+    if (!ids) return;
+    for (const feedId of ids) {
+      await sendSignal(feedId, { cmd });
+    }
+  }
+
+  async function bulkTimer() {
+    const mins = parseInt(document.getElementById('bulk-duration').value);
+    if (!mins || mins <= 0) { addResult('ERROR: Enter minutes for timer', true); return; }
+    const ids = getSelectedFeeds();
+    if (!ids) return;
+    for (const feedId of ids) {
+      await sendSignal(feedId, { cmd: 'timer', duration_ms: mins * 60 * 1000 });
+    }
+  }
+
+  function getBulkUnitId() {
+    const id = parseInt(document.getElementById('bulk-unit-id').value);
+    if (!id || id <= 0) { addResult('ERROR: Enter a unit ID', true); return null; }
+    return id;
+  }
+
+  async function bulkUnit(cmd) {
+    const device_id = getBulkUnitId();
+    if (!device_id) return;
+    const ids = getSelectedFeeds();
+    if (!ids) return;
+    for (const feedId of ids) {
+      await sendSignal(feedId, { cmd, device_id });
+    }
+  }
+
+  async function bulkDisable() {
+    const device_id = getBulkUnitId();
+    if (!device_id) return;
+    const ids  = getSelectedFeeds();
+    if (!ids) return;
+    const secs = parseInt(document.getElementById('bulk-punish').value) || 0;
+    for (const feedId of ids) {
+      const body = { cmd: 'disable', device_id };
+      if (secs > 0) body.punish_ms = secs * 1000;
+      await sendSignal(feedId, body);
+    }
+  }
+
+  async function bulkDeduct() {
+    const device_id = getBulkUnitId();
+    if (!device_id) return;
+    const ids  = getSelectedFeeds();
+    if (!ids) return;
+    const secs = parseInt(document.getElementById('bulk-deduct').value);
+    if (!secs || secs <= 0) { addResult('ERROR: Enter seconds to deduct', true); return; }
+    for (const feedId of ids) {
+      await sendSignal(feedId, { cmd: 'deduct', device_id, time_ms: secs * 1000 });
+    }
+  }
+
+  // sends to backend, logs result
+  async function sendSignal(feedId, body) {
+    const feed  = allFeeds.find(f => f.id === feedId);
+    const label = feed ? feed.label : `Feed ${feedId}`;
+
+    const res  = await fetch('/api/signal', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(body)
+    });
+    const data = await res.json();
+
+    if (res.ok || res.status === 202) {
+      const warn = res.status === 202 ? ' (ESP32 unreachable)' : '';
+      addResult(`${label} ← ${JSON.stringify(body)}${warn}`, false);
+    } else {
+      addResult(`${label} ERROR: ${data.error}`, true);
+    }
+  }
+
+  function addResult(text, isError) {
+    cmdResults.unshift({ text, time: new Date().toLocaleTimeString(), isError });
+    const el = document.getElementById('cmd-result');
+    el.innerHTML = cmdResults.slice(0, 30).map(r => `
+      <div class="cmd-result-line">
+        <span style="color:var(--t3);margin-right:8px">${r.time}</span>
+        <span style="color:${r.isError ? 'var(--red)' : 'var(--accent)'}">${r.text}</span>
+      </div>`).join('');
+  }
+
+  loadFeeds();
+  setInterval(loadFeeds, 5000);
+</script>
+</body>
+</html>
