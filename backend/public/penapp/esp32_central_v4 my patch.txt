@@ -1,0 +1,37 @@
+// ============================================================
+//  ESP32 SERIAL PATCH — exact placement for esp32_central_v4.ino
+// ============================================================
+
+// STEP 1 — Add this function.
+// Find: void handleWebCommand(String json) {
+// Paste the ENTIRE block below DIRECTLY ABOVE that line.
+
+static String serialBuf = "";
+
+void readSerialCommands() {
+  while (Serial.available()) {
+    char c = Serial.read();
+    if (c == '\n') {
+      serialBuf.trim();
+      if (serialBuf.length() > 0) {
+        Serial.print("[Serial] Received: ");
+        Serial.println(serialBuf);
+        handleWebCommand(serialBuf);
+      }
+      serialBuf = "";
+    } else if (c != '\r') {
+      serialBuf += c;
+    }
+  }
+}
+
+// STEP 2 — Add one call inside loop().
+// Find inside loop():   checkButton();
+// Change it to:
+//
+//   checkButton();
+//   readSerialCommands();
+//
+// Done. Upload. Test by sending a signal from candidate page
+// and watching Serial Monitor at 115200 — you should see:
+//   [Serial] Received: {"cmd":"start"}

@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Proctor — Signal History</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div class="layout">
+  <div id="sidebar" style="min-width:200px;width:200px;flex-shrink:0"></div>
+
+  <main class="main">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Signal History</div>
+        <div class="page-sub" id="history-summary">Loading...</div>
+      </div>
+      <button class="btn btn-ghost" onclick="exportCSV()">↓ Export CSV</button>
+    </div>
+
+    <!-- Note about legacy signals without session names -->
+    <div id="legacy-note" style="
+      display:none;
+      padding:10px 14px;
+      background:rgba(255,176,32,0.08);
+      border:1px solid rgba(255,176,32,0.25);
+      border-radius:8px;
+      font-size:11px;
+      color:var(--amber);
+      margin-bottom:12px">
+      ℹ Some signals show "—" in the Session column. These were sent before
+      session tracking was enabled. New signals will show their session name.
+    </div>
+
+    <!-- Filters -->
+    <div class="filter-bar">
+
+      <!-- Date picker — selecting a date filters the session dropdown -->
+      <div class="filter-group">
+        <label>Date</label>
+        <input class="input" type="date" id="filter-date"
+          style="padding:7px 10px;font-size:12px"
+          oninput="onDateChange()">
+      </div>
+
+      <!-- Session dropdown — reduced by date if selected -->
+      <div class="filter-group" style="min-width:200px">
+        <label>
+          Session
+          <span id="session-hint"
+            style="color:var(--t3);font-size:10px;
+                   margin-left:4px;font-weight:400">
+          </span>
+        </label>
+        <select class="input" id="filter-session"
+          style="padding:7px 10px;font-size:12px">
+          <!-- Static options — always present -->
+          <option value="active">Active session</option>
+          <option value="all">All sessions</option>
+          <!-- Dynamic session options added by populateSessionDropdown() -->
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label>Source</label>
+        <select class="input" id="filter-source" style="padding:7px 10px;font-size:12px">
+          <option value="all">All sources</option>
+          <option value="admin">Candidate page</option>
+          <option value="pen_app">Pen app</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label>Command</label>
+        <select class="input" id="filter-cmd" style="padding:7px 10px;font-size:12px">
+          <option value="all">All commands</option>
+          <option value="start">start</option>
+          <option value="pause">pause</option>
+          <option value="end">end</option>
+          <option value="reset">reset</option>
+          <option value="timer">timer</option>
+          <option value="warn">warn</option>
+          <option value="disable">disable</option>
+          <option value="enable">enable</option>
+          <option value="deduct">deduct</option>
+        </select>
+      </div>
+
+      <button class="btn btn-ghost" style="align-self:flex-end"
+        onclick="applyFilters()">
+        ⟳ Apply
+      </button>
+
+      <!-- Client-side hide — no DB changes -->
+      <button class="btn btn-ghost" style="align-self:flex-end"
+        onclick="hideVisible()"
+        title="Hide currently shown signals from view (stored locally, no DB change)">
+        ⊘ Hide Shown
+      </button>
+
+      <!-- Restore all client-side hidden signals -->
+      <button class="btn btn-ghost" style="align-self:flex-end"
+        onclick="restoreHidden()"
+        title="Bring back all signals hidden from view">
+        ↺ Restore All
+      </button>
+
+    </div>
+
+    <!-- Results container — rendered by renderGrouped() -->
+    <div id="history-container">
+      <div style="color:var(--t3);font-size:12px;
+        padding:40px 0;text-align:center">
+        Loading...
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script src="/js/nav.js"></script>
+<script>
+  document.getElementById('sidebar').innerHTML = buildSidebar();
+  initSidebar();
+
+  // ── State ─────────────────────────────────────────────────
+  let allEntries      = [];           // current batch from API
+  let activeSessionId = null;         // currently active exam session
+  let allSessions     = [];           // all sessions for dropdown
+
+  // Hidden entry IDs — persisted in localStorage so they survive
+  // page refreshes. Client-side only — no DB changes.
+  let hiddenIds = new Set(
+    JSON.parse(localStorage.getItem('history-hidden') || '[]')
+  );
+
+  // ── Bootstrap ─────────────────────────────────────────────
+  async function init() {
+    // Get active session ID for the "Active session" dropdown option
+    const active    = await api('/api/sessions/active');
+    activeSessionId = active?.session?.id || null;
+
+    // Load all sessions so the dropdown can be filtered by date
+    const sessData = await api('/api/sessions');
+    allSessions    = sessData?.sessions || [];
+
+    populateSessionDropdown(allSessions);
+    applyFilters();
+  }
+
+  // ── Session dropdown ──────────────────────────────────────
+  // Rebuilds the dynamic part of the dropdown from the given list.
+  // Called on init and whenever the date picker changes.
+  function populateSessionDropdown(sessions) {
+    const sel = document.getElementById('filter-session');
+
+    // Remove all dynamic options (keep "Active session" and "All sessions")
+    while (sel.options.length > 2) sel.remove(2);
+
+    sessions.forEach(s => {
+      const opt   = document.createElement('option');
+      opt.value   = s.id;
+      opt.text    = s.name + (s.ended_at ? '' : ' ● active');
+      // Pre-select the active session if present
+      if (s.id === activeSessionId) opt.selected = true;
+      sel.appendChild(opt);
+    });
+
+    // Update hint text to show filter is active
+    const hint = document.getElementById('session-hint');
+    hint.textContent = sessions.length < allSessions.length
+      ? `(${sessions.length} on this date)`
+      : '';
+  }
+
+  // ── Date change handler ───────────────────────────────────
+  // Filters session dropdown to only show sessions that were
+  // active on the selected date. If no date, shows all sessions.
+  function onDateChange() {
+    const dateVal = document.getElementById('filter-date').value;
+
+    if (!dateVal) {
+      // No date selected — restore full session list
+      populateSessionDropdown(allSessions);
+      return;
+    }
+
+    const dayStart = new Date(dateVal); dayStart.setHours(0,  0,  0,   0);
+    const dayEnd   = new Date(dateVal); dayEnd.setHours(  23, 59, 59, 999);
+
+    const matching = allSessions.filter(s => {
+      const start = new Date(s.created_at);
+      // Active sessions: treat end as now (they extend to current time)
+      const end   = s.ended_at ? new Date(s.ended_at) : new Date();
+      // Session overlaps the selected calendar day
+      return start <= dayEnd && end >= dayStart;
+    });
+
+    populateSessionDropdown(matching);
+
+    // Auto-select "all" if no sessions match — avoids confusing empty result
+    if (matching.length === 0) {
+      document.getElementById('filter-session').value = 'all';
+    }
+  }
+
+  // ── Apply filters → fetch from API ───────────────────────
+  async function applyFilters() {
+    const sessionVal = document.getElementById('filter-session').value;
+    const source     = document.getElementById('filter-source').value;
+    const cmd        = document.getElementById('filter-cmd').value;
+    const date       = document.getElementById('filter-date').value;
+
+    const params = new URLSearchParams();
+
+    // Resolve session dropdown value to an actual session_id param
+    if (sessionVal === 'active') {
+      // "Active session" — only pass param if we know the active session id
+      if (activeSessionId) params.set('sessionId', activeSessionId);
+      // else: no sessionId param → backend returns all (correct for no-session state)
+    } else if (sessionVal !== 'all') {
+      // A specific numeric session id was selected
+      params.set('sessionId', sessionVal);
+    }
+    // 'all' → no sessionId param → backend returns all signals
+
+    if (date)             params.set('date',   date);
+    if (source !== 'all') params.set('source', source);
+    if (cmd    !== 'all') params.set('cmd',    cmd);
+
+    const data = await api(`/api/history?${params}`);
+    if (!data) return;
+
+    allEntries = data.entries;
+
+    // Show legacy note if any entry has a null session_name
+    const hasLegacy = allEntries.some(e => !e.session_name);
+    document.getElementById('legacy-note').style.display =
+      hasLegacy ? 'block' : 'none';
+
+    renderVisible();
+  }
+
+  // ── Render only non-hidden entries ────────────────────────
+  function renderVisible() {
+    const visible = allEntries.filter(e => !hiddenIds.has(e.id));
+
+    document.getElementById('history-summary').textContent =
+      `${visible.length} signal${visible.length !== 1 ? 's' : ''} shown` +
+      (hiddenIds.size > 0 ? ` · ${hiddenIds.size} hidden` : '');
+
+    renderGrouped(visible);
+  }
+
+  // ── Hide Shown: mark all currently visible as hidden ──────
+  // Stored in localStorage — survives page reload, no DB change.
+  function hideVisible() {
+    allEntries
+      .filter(e => !hiddenIds.has(e.id))
+      .forEach(e => hiddenIds.add(e.id));
+    localStorage.setItem('history-hidden', JSON.stringify([...hiddenIds]));
+    renderVisible();
+  }
+
+  // ── Restore All: clear the hidden set ─────────────────────
+  function restoreHidden() {
+    hiddenIds.clear();
+    localStorage.removeItem('history-hidden');
+    renderVisible();
+  }
+
+  // ── Group entries by calendar date and render ─────────────
+  function renderGrouped(entries) {
+    const container = document.getElementById('history-container');
+
+    if (entries.length === 0) {
+      container.innerHTML = `
+        <div style="color:var(--t3);font-size:12px;
+          padding:40px 0;text-align:center">
+          No signals found
+          ${hiddenIds.size > 0
+            ? `<span style="margin-left:8px">
+                <button class="btn btn-ghost"
+                  style="font-size:11px;padding:3px 10px"
+                  onclick="restoreHidden()">
+                  ↺ Restore ${hiddenIds.size} hidden
+                </button>
+               </span>`
+            : ''}
+        </div>`;
+      return;
+    }
+
+    // Group by local date string e.g. "14 Apr 2026"
+    const groups = {};
+    entries.forEach(e => {
+      const d   = new Date(e.ts);
+      const key = d.toLocaleDateString('en-GB', {
+        day: '2-digit', month: 'short', year: 'numeric'
+      });
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(e);
+    });
+
+    container.innerHTML = Object.entries(groups).map(([date, rows]) => `
+      <div style="margin-bottom:20px">
+
+        <!-- Date group header -->
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+          <span style="font-family:var(--fd);font-size:13px;font-weight:700;
+            letter-spacing:0.10em;color:var(--accent);text-transform:uppercase">
+            ${date}
+          </span>
+          <span style="font-size:10px;color:var(--t3);background:var(--adim);
+            border:1px solid var(--border);border-radius:3px;padding:1px 7px">
+            ${rows.length} signal${rows.length !== 1 ? 's' : ''}
+          </span>
+          <div style="flex:1;height:1px;background:var(--border)"></div>
+        </div>
+
+        <div class="card" style="padding:0;overflow:hidden">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>Session</th>
+                <th>Command</th>
+                <th>Target</th>
+                <th>Params</th>
+                <th>Source</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows.map(renderRow).join('')}
+            </tbody>
+          </table>
+        </div>
+
+      </div>`
+    ).join('');
+  }
+
+  // ── Colour / label maps ───────────────────────────────────
+  const CMD_COLOR = {
+    start:   'var(--green)', enable:  'var(--green)',
+    pause:   'var(--amber)', warn:    'var(--amber)',
+    timer:   'var(--accent)',
+    end:     'var(--red)',   disable: 'var(--red)',
+    deduct:  'var(--red)',   reset:   'var(--t2)',
+  };
+  const CMD_LABEL = {
+    start: 'Start',    pause:   'Pause',    end:    'End',
+    reset: 'Reset',    timer:   'Set Timer',warn:   'Warn',
+    disable: 'Disable', enable: 'Enable',   deduct: 'Deduct',
+  };
+
+  // ── Render a single table row ─────────────────────────────
+  function renderRow(e) {
+    const time    = new Date(e.ts).toLocaleTimeString();
+    const color   = CMD_COLOR[e.cmd] || 'var(--t2)';
+    const label   = CMD_LABEL[e.cmd] || e.cmd;
+
+    // session_name is populated for signals sent after signals_v4.js
+    // was applied. Legacy signals will have null → show "—" in amber
+    // as a distinct visual cue from normal "—" cells.
+    const session = e.session_name
+      ? `<span style="color:var(--accent)">${e.session_name}</span>`
+      : `<span style="color:var(--amber);font-size:10px"
+           title="Signal sent before session tracking was enabled">
+           legacy
+         </span>`;
+
+    const target = e.params?.device_id
+      ? `<span style="color:var(--accent);font-family:var(--fm)">
+           Unit #${e.params.device_id}
+         </span>`
+      : `<span style="color:var(--t3)">All units</span>`;
+
+    // Build params summary string
+    const extras = [];
+    if (e.params?.duration_ms)
+      extras.push(`${Math.round(e.params.duration_ms / 60000)}m`);
+    if (e.params?.time_ms)
+      extras.push(`−${Math.round(e.params.time_ms / 1000)}s`);
+    if (e.params?.punish_ms)
+      extras.push(`penalty ${Math.round(e.params.punish_ms / 1000)}s`);
+    if (e.params?.transport)
+      extras.push(`via ${e.params.transport}`);
+    const paramsStr = extras.length
+      ? `<span style="color:var(--t2);font-size:11px">
+           ${extras.join(' · ')}
+         </span>`
+      : `<span style="color:var(--t3)">—</span>`;
+
+    const srcLabel = e.sent_by === 'pen_app' ? 'Pen App' : 'Candidate Page';
+    const srcColor = e.sent_by === 'pen_app' ? '#7c6fff'  : 'var(--accent)';
+    const srcBg    = e.sent_by === 'pen_app'
+      ? 'rgba(124,111,255,0.15)'
+      : 'var(--adim)';
+
+    return `<tr>
+      <td style="color:var(--t2);font-family:var(--fm);font-size:11px">
+        ${time}
+      </td>
+      <td style="font-size:11px">${session}</td>
+      <td>
+        <span style="padding:2px 8px;border-radius:3px;font-size:11px;
+          font-weight:600;letter-spacing:0.06em;
+          background:rgba(255,255,255,0.04);color:${color}">
+          ${label}
+        </span>
+      </td>
+      <td>${target}</td>
+      <td>${paramsStr}</td>
+      <td>
+        <span style="padding:2px 8px;border-radius:3px;font-size:10px;
+          font-weight:600;letter-spacing:0.06em;
+          background:${srcBg};color:${srcColor}">
+          ${srcLabel}
+        </span>
+      </td>
+    </tr>`;
+  }
+
+  // ── CSV export — only exports currently visible entries ───
+  function exportCSV() {
+    const visible = allEntries.filter(e => !hiddenIds.has(e.id));
+    if (!visible.length) return;
+
+    const headers = ['Time', 'Session', 'Command', 'Target', 'Params', 'Source'];
+    const rows    = visible.map(e => [
+      new Date(e.ts).toISOString(),
+      e.session_name || 'legacy',
+      e.cmd,
+      e.params?.device_id ? `Unit #${e.params.device_id}` : 'All units',
+      [
+        e.params?.duration_ms
+          ? `${Math.round(e.params.duration_ms / 60000)}m` : '',
+        e.params?.time_ms
+          ? `-${Math.round(e.params.time_ms / 1000)}s` : '',
+        e.params?.transport || '',
+      ].filter(Boolean).join(' '),
+      e.sent_by,
+    ]);
+
+    const csv  = [headers, ...rows].map(r => r.join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = `signals_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  // ── Start ─────────────────────────────────────────────────
+  init();
+</script>
+</body>
+</html>
