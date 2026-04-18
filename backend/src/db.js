@@ -1,7 +1,7 @@
-
+// src/db.js
 import dotenv from 'dotenv';
-dotenv.config({quiet: true});
-import pg     from 'pg';
+dotenv.config();
+import pg from 'pg';
 
 const pool = new pg.Pool({
   host:     process.env.PG_HOST,
@@ -26,3 +26,30 @@ export async function query(sql, params = []) {
 }
 
 export default pool;
+
+// Atomic upsert — prevents race condition on simultaneous camera connects
+export async function getOrCreateFeed(clientId, label) {
+  const result = await query(
+    `INSERT INTO feeds (label, client_id, connected)
+     VALUES ($1, $2, true)
+     ON CONFLICT (client_id)
+     DO UPDATE SET label = EXCLUDED.label, connected = true, deleted_at = NULL
+     RETURNING *`,
+    [label, clientId]
+  );
+  return result.rows[0];
+}
+
+// Returns the currently active exam session, or null if none started.
+// Used by wsHandler, signals.js, penlog.js to write session_id.
+export async function getActiveSession() {
+  const result = await query(
+    `SELECT * FROM exam_sessions WHERE ended_at IS NULL ORDER BY created_at DESC LIMIT 1`
+  );
+  return result.rows[0] || null;
+}
+
+export async function resetAllConnected() {
+  await query('UPDATE feeds SET connected = false');
+  console.log('[DB] Reset all feeds to connected=false');
+}

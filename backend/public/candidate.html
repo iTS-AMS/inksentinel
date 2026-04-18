@@ -8,7 +8,7 @@
 </head>
 <body>
 <div class="layout">
-  <div id="sidebar"></div>
+  <div id="sidebar" style="min-width:200px;width:200px;flex-shrink:0"></div>
 
   <main class="main">
     <div class="breadcrumb">
@@ -132,7 +132,13 @@
             </div>
           </div>
         </div>
-
+<!---   Pen control Page      -->
+<div class="card" style="text-align:center;padding:14px 20px">
+  <a href="/pen" target="_blank" class="btn btn-ghost"
+    style="width:100%;justify-content:center">
+    ✒ Open Pen Control Panel
+  </a>
+</div>
       </div>
     </div>
   </main>
@@ -141,6 +147,7 @@
 <script src="/js/nav.js"></script>
 <script>
   document.getElementById('sidebar').innerHTML = buildSidebar();
+initSidebar();
 
   const feedId  = window.location.pathname.split('/')[2];
   let signalLog = [];
@@ -302,6 +309,40 @@
   }
 
   loadFeed();
+
+  const ws = new WebSocket(`ws://${window.location.host}/ws?role=dashboard`);
+ws.binaryType = 'arraybuffer';
+
+ws.onmessage = (event) => {
+  if (event.data instanceof ArrayBuffer) {
+    const view = new DataView(event.data);
+    const incomingFeedId = view.getUint32(0);
+
+    // Only process if the frame belongs to THIS candidate
+    if (incomingFeedId == feedId) {
+      const jpegBlob = new Blob([event.data.slice(4)], { type: 'image/jpeg' });
+      const imageUrl = URL.createObjectURL(jpegBlob);
+      
+      const wrap = document.getElementById('video-wrap');
+      // Create or update img element
+      let img = document.getElementById('live-video-stream');
+      if (!img) {
+        wrap.innerHTML = ''; // Clear placeholder
+        img = document.createElement('img');
+        img.id = 'live-video-stream';
+        img.className = 'video-large'; // Use your existing CSS class
+        img.style.width = '100%';
+        wrap.appendChild(img);
+      }
+      
+      const oldUrl = img.src;
+      img.src = imageUrl;
+      if (oldUrl.startsWith('blob:')) URL.revokeObjectURL(oldUrl);
+      
+      document.getElementById('video-status').textContent = 'LIVE FEED';
+    }
+  }
+};
 </script>
 </body>
 </html>

@@ -5,20 +5,70 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Proctor — Session</title>
   <link rel="stylesheet" href="/css/style.css">
+  <style>
+    /* Editable candidate name field in attendance table */
+    .attendance-name-input {
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid var(--border);
+      color: var(--t1);
+      font-family: var(--fm);
+      font-size: 12px;
+      padding: 2px 4px;
+      width: 160px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .attendance-name-input:focus        { border-color: var(--accent); }
+    .attendance-name-input::placeholder { color: var(--t3); }
+  </style>
 </head>
 <body>
 <div class="layout">
-  <div id="sidebar"></div>
+  <div id="sidebar" style="min-width:200px;width:200px;flex-shrink:0"></div>
 
   <main class="main">
+
     <div class="page-header">
       <div>
         <div class="page-title">Session Overview</div>
-        <div class="page-sub">Real-time exam monitoring statistics</div>
+        <div class="page-sub" id="session-sub">Loading...</div>
       </div>
-      <span style="font-size:10px;color:var(--t3);letter-spacing:0.06em">
-        Auto-refreshes every 10s
-      </span>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:10px;color:var(--t3);letter-spacing:0.06em">
+          Auto-refreshes every 10s
+        </span>
+        <a href="/allsessions" class="btn btn-ghost" style="font-size:11px;padding:5px 12px">
+          ☰ All Sessions
+        </a>
+      </div>
+    </div>
+
+    <!-- Active / historical session banner -->
+    <div class="session-banner" id="session-banner" style="display:none">
+      <div class="session-dot" id="session-dot"></div>
+      <div>
+        <div class="session-name" id="banner-name">—</div>
+        <div class="session-meta" id="banner-meta">—</div>
+      </div>
+      <div style="flex:1"></div>
+      <!-- Only visible when session is still active -->
+      <button class="btn btn-danger" id="end-btn"
+        style="font-size:11px;padding:5px 12px;display:none"
+        onclick="endSession()">
+        ⏹ End Session
+      </button>
+    </div>
+
+    <!-- Shown when no session is active and none specified via URL -->
+    <div id="no-session-warning" style="
+      display:none;padding:16px;background:var(--rdim);
+      border:1px solid rgba(255,59,59,0.25);border-radius:8px;
+      font-size:12px;color:var(--red);margin-bottom:16px">
+      ⚠ No active session.
+      <a href="/allsessions" style="color:var(--accent);margin-left:8px">
+        Start a new session →
+      </a>
     </div>
 
     <!-- KPI row -->
@@ -43,32 +93,64 @@
 
     <!-- Charts row -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
-
       <div class="card">
         <div class="card-title">Alerts Per Candidate</div>
-        <div id="bar-chart" style="display:flex;flex-direction:column;gap:10px"></div>
+        <div id="bar-chart" style="display:flex;flex-direction:column;gap:10px">
+          <div style="color:var(--t3);font-size:12px">Loading...</div>
+        </div>
       </div>
-
       <div class="card">
         <div class="card-title">Detection Types</div>
-        <div id="class-chart" style="display:flex;flex-direction:column;gap:10px"></div>
+        <div id="class-chart" style="display:flex;flex-direction:column;gap:10px">
+          <div style="color:var(--t3);font-size:12px">Loading...</div>
+        </div>
       </div>
-
     </div>
 
     <!-- Candidate summary table -->
-    <div class="card">
+    <div class="card" style="margin-bottom:20px">
       <div class="card-title">Candidate Summary</div>
       <table class="table">
         <thead>
           <tr>
-            <th>Candidate</th>
+            <th>Seat</th>
             <th>Status</th>
             <th>Alert Count</th>
             <th>Risk Level</th>
           </tr>
         </thead>
-        <tbody id="candidate-table"></tbody>
+        <tbody id="candidate-table">
+          <tr><td colspan="4" style="color:var(--t3);text-align:center">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Attendance register — sourced from session_feeds table -->
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <div class="card-title" style="margin-bottom:0">Attendance Register</div>
+        <span id="attendance-count"
+          style="font-size:11px;color:var(--t3);font-family:var(--fm)"></span>
+      </div>
+      <p style="font-size:11px;color:var(--t3);margin-bottom:12px">
+        Populated when cameras connect during a session.
+        Click a name field to add or edit. Press Enter or click away to save.
+      </p>
+      <table class="table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Seat</th>
+            <th>Candidate Name</th>
+            <th>Connected At</th>
+            <th>Alerts</th>
+          </tr>
+        </thead>
+        <tbody id="attendance-tbody">
+          <tr>
+            <td colspan="5" style="color:var(--t3);text-align:center">Loading...</td>
+          </tr>
+        </tbody>
       </table>
     </div>
 
@@ -78,66 +160,290 @@
 <script src="/js/nav.js"></script>
 <script>
   document.getElementById('sidebar').innerHTML = buildSidebar();
+  initSidebar();
 
+  // ── State ─────────────────────────────────────────────────
+  // urlSessionId: set once from URL param — null means "use active"
+  // currentSessionId: updated by API response, tracks what's displayed
+  const urlParams      = new URLSearchParams(window.location.search);
+  const urlSessionId   = urlParams.get('id') ? parseInt(urlParams.get('id')) : null;
+  let   currentSessionId = urlSessionId;
+  let   isHistorical     = false;
+  let   refreshTimer     = null;
+
+  // ── Helpers: clear all tables immediately ─────────────────
+  // Called before any async load to prevent stale data showing
+  // while the new request is in flight.
+  function clearAllSections() {
+    document.getElementById('kpi-live').textContent    = '—';
+    document.getElementById('kpi-alerts').textContent  = '—';
+    document.getElementById('kpi-flagged').textContent = '—';
+    document.getElementById('kpi-clear').textContent   = '—';
+    document.getElementById('bar-chart').innerHTML =
+      '<div style="color:var(--t3);font-size:12px">Loading...</div>';
+    document.getElementById('class-chart').innerHTML =
+      '<div style="color:var(--t3);font-size:12px">Loading...</div>';
+    document.getElementById('candidate-table').innerHTML =
+      '<tr><td colspan="4" style="color:var(--t3);text-align:center">Loading...</td></tr>';
+    document.getElementById('attendance-tbody').innerHTML =
+      '<tr><td colspan="5" style="color:var(--t3);text-align:center">Loading...</td></tr>';
+    document.getElementById('attendance-count').textContent = '';
+  }
+
+  // ── Main data load ────────────────────────────────────────
   async function loadStats() {
-    const data = await api('/api/stats');
+    // Always query with the explicit session id if we have one —
+    // this ensures switching sessions via URL param works correctly
+    const url = currentSessionId
+      ? `/api/stats?session_id=${currentSessionId}`
+      : '/api/stats';
+
+    const data = await api(url);
     if (!data) return;
 
-    // KPIs
+    // ── Session banner ────────────────────────────────────────
+    if (data.sessionInfo) {
+      currentSessionId = data.sessionId;
+      const s          = data.sessionInfo;
+      isHistorical     = !!s.ended_at;
+
+      document.getElementById('session-banner').style.display      = 'flex';
+      document.getElementById('no-session-warning').style.display  = 'none';
+      document.getElementById('banner-name').textContent            = s.name;
+
+      // Green dot = active, grey dot = ended/historical
+      const dot         = document.getElementById('session-dot');
+      dot.style.background = isHistorical ? 'var(--t3)' : 'var(--green)';
+      dot.style.boxShadow  = isHistorical ? 'none'      : '0 0 6px var(--green)';
+
+      // End button only visible for active sessions
+      document.getElementById('end-btn').style.display =
+        isHistorical ? 'none' : 'inline-flex';
+
+      const parts = [];
+      if (s.course_name)     parts.push(s.course_name);
+      if (s.instructor_name) parts.push(s.instructor_name);
+      if (s.time_block)      parts.push(s.time_block);
+      document.getElementById('banner-meta').textContent = parts.join(' · ');
+
+      const started = new Date(s.created_at).toLocaleString();
+      const status  = s.ended_at
+        ? `Ended ${new Date(s.ended_at).toLocaleTimeString()}`
+        : 'ACTIVE';
+      document.getElementById('session-sub').textContent =
+        `${started} · ${status}`;
+
+    } else {
+      // No session — clear everything and show warning
+      currentSessionId = null;
+      document.getElementById('session-banner').style.display     = 'none';
+      document.getElementById('no-session-warning').style.display = 'block';
+      document.getElementById('session-sub').textContent          = 'No active session';
+      clearAllSections();
+      return; // nothing else to render
+    }
+
+    // ── KPIs ──────────────────────────────────────────────────
     document.getElementById('kpi-live').textContent    = data.liveFeeds;
     document.getElementById('kpi-alerts').textContent  = data.totalAlerts;
     document.getElementById('kpi-flagged').textContent = data.flaggedFeeds;
-    document.getElementById('kpi-clear').textContent   = data.liveFeeds - data.flaggedFeeds;
+    document.getElementById('kpi-clear').textContent   = data.clearFeeds ?? 0;
 
-    // alerts per candidate bar chart
+    // ── Alerts per candidate bar chart ────────────────────────
     const maxAlerts = Math.max(...data.byFeed.map(f => f.alerts), 1);
-    document.getElementById('bar-chart').innerHTML = data.byFeed.map(f => `
-      <div style="display:grid;grid-template-columns:80px 1fr 30px;
-        align-items:center;gap:10px">
-        <span style="font-size:11px;color:var(--t2)">${f.label}</span>
-        <div style="height:6px;background:var(--raised);border-radius:3px;overflow:hidden">
-          <div style="height:100%;width:${(f.alerts/maxAlerts)*100}%;
-            background:var(--red);border-radius:3px;transition:width 0.4s ease"></div>
-        </div>
-        <span style="font-size:11px;color:${f.alerts>0?'var(--red)':'var(--t3)'};
-          text-align:right">${f.alerts}</span>
-      </div>`).join('');
+    document.getElementById('bar-chart').innerHTML = data.byFeed.length === 0
+      ? '<div style="color:var(--t3);font-size:12px">No candidates this session</div>'
+      : data.byFeed.map(f => `
+          <div style="display:grid;grid-template-columns:80px 1fr 30px;
+            align-items:center;gap:10px">
+            <span style="font-size:11px;color:var(--t2)">${f.label}</span>
+            <div style="height:6px;background:var(--raised);
+              border-radius:3px;overflow:hidden">
+              <div style="height:100%;width:${(f.alerts / maxAlerts) * 100}%;
+                background:var(--red);border-radius:3px;
+                transition:width 0.4s ease"></div>
+            </div>
+            <span style="font-size:11px;text-align:right;
+              color:${f.alerts > 0 ? 'var(--red)' : 'var(--t3)'}">
+              ${f.alerts}
+            </span>
+          </div>`).join('');
 
-    // detection types bar chart
-    const classes   = Object.entries(data.byClass);
-    const maxClass  = Math.max(...classes.map(([,v]) => v), 1);
+    // ── Detection types bar chart ─────────────────────────────
+    const classes  = Object.entries(data.byClass);
+    const maxClass = Math.max(...classes.map(([, v]) => v), 1);
     document.getElementById('class-chart').innerHTML = classes.length === 0
       ? '<div style="color:var(--t3);font-size:12px">No detections yet</div>'
       : classes.map(([cls, count]) => `
           <div style="display:grid;grid-template-columns:90px 1fr 30px;
             align-items:center;gap:10px">
             <span style="font-size:11px;color:var(--t2)">${cls}</span>
-            <div style="height:6px;background:var(--raised);border-radius:3px;overflow:hidden">
-              <div style="height:100%;width:${(count/maxClass)*100}%;
-                background:var(--amber);border-radius:3px;transition:width 0.4s ease"></div>
+            <div style="height:6px;background:var(--raised);
+              border-radius:3px;overflow:hidden">
+              <div style="height:100%;width:${(count / maxClass) * 100}%;
+                background:var(--amber);border-radius:3px;
+                transition:width 0.4s ease"></div>
             </div>
-            <span style="font-size:11px;color:var(--amber);text-align:right">${count}</span>
+            <span style="font-size:11px;color:var(--amber);text-align:right">
+              ${count}
+            </span>
           </div>`).join('');
 
-    // candidate summary table
-    document.getElementById('candidate-table').innerHTML = data.byFeed.map(f => {
-      const risk      = f.alerts === 0 ? 'CLEAR' : f.alerts < 4 ? 'MODERATE' : 'HIGH';
-      const riskClass = f.alerts === 0 ? 'badge-live' : f.alerts < 4 ? 'badge-warn' : 'badge-alert';
+    // ── Candidate summary table ───────────────────────────────
+    document.getElementById('candidate-table').innerHTML =
+      data.byFeed.length === 0
+        ? `<tr>
+             <td colspan="4"
+               style="color:var(--t3);text-align:center;padding:24px">
+               No candidates this session
+             </td>
+           </tr>`
+        : data.byFeed.map(f => {
+            const risk      = f.alerts === 0 ? 'CLEAR'
+                            : f.alerts  <  4 ? 'MODERATE' : 'HIGH';
+            const riskClass = f.alerts === 0 ? 'badge-live'
+                            : f.alerts  <  4 ? 'badge-warn' : 'badge-alert';
+            return `<tr>
+              <td>
+                <a href="/candidate/${f.id || ''}"
+                  style="font-weight:500;color:var(--t1);text-decoration:none">
+                  ${f.label}
+                </a>
+              </td>
+              <td>
+                <span class="badge ${f.connected ? 'badge-live' : 'badge-off'}">
+                  ● ${f.connected ? 'LIVE' : 'OFFLINE'}
+                </span>
+              </td>
+              <td style="color:${f.alerts > 0 ? 'var(--red)' : 'var(--t2)'}">
+                ${f.alerts}
+              </td>
+              <td><span class="badge ${riskClass}">${risk}</span></td>
+            </tr>`;
+          }).join('');
+
+    // ── Attendance register ───────────────────────────────────
+    // Separate API call — session_feeds table
+    if (currentSessionId) {
+      loadAttendance(currentSessionId);
+    } else {
+      // No session — clear attendance table
+      document.getElementById('attendance-tbody').innerHTML =
+        `<tr>
+           <td colspan="5"
+             style="color:var(--t3);text-align:center;padding:24px">
+             No session selected
+           </td>
+         </tr>`;
+      document.getElementById('attendance-count').textContent = '';
+    }
+  }
+
+  // ── Attendance table ──────────────────────────────────────
+  async function loadAttendance(sessionId) {
+    const data = await api(`/api/sessions/${sessionId}/attendance`);
+    if (!data) return;
+
+    const rows    = data.attendance;
+    const tbody   = document.getElementById('attendance-tbody');
+    const countEl = document.getElementById('attendance-count');
+
+    countEl.textContent =
+      `${rows.length} seat${rows.length !== 1 ? 's' : ''} registered`;
+
+    if (rows.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="5"
+            style="color:var(--t3);text-align:center;padding:24px">
+            No cameras connected during this session
+          </td>
+        </tr>`;
+      return;
+    }
+
+    tbody.innerHTML = rows.map((row, i) => {
+      const alerts     = Number(row.alert_count);
+      const alertColor = alerts > 0 ? 'var(--amber)' : 'var(--t3)';
+      const connAt     = new Date(row.connected_at).toLocaleTimeString();
+
       return `<tr>
-        <td style="font-weight:500">${f.label}</td>
-        <td>
-          <span class="badge ${f.connected ? 'badge-live' : 'badge-off'}">
-            ● ${f.connected ? 'LIVE' : 'OFFLINE'}
-          </span>
+        <td style="color:var(--t3)">${i + 1}</td>
+        <td style="font-weight:500;font-family:var(--fd);font-size:14px">
+          ${row.feed_label}
         </td>
-        <td style="color:${f.alerts>0?'var(--red)':'var(--t2)'}">${f.alerts}</td>
-        <td><span class="badge ${riskClass}">${risk}</span></td>
+        <td>
+          <input
+            class="attendance-name-input"
+            type="text"
+            value="${row.candidate_name || ''}"
+            placeholder="Enter name..."
+            data-sfid="${row.id}"
+            onblur="saveName(this)"
+            onkeydown="if(event.key==='Enter') this.blur()">
+        </td>
+        <td style="font-size:11px;color:var(--t3)">${connAt}</td>
+        <td style="color:${alertColor}">
+          ${alerts > 0 ? `${alerts} flag${alerts > 1 ? 's' : ''}` : '—'}
+        </td>
       </tr>`;
     }).join('');
   }
 
+  // ── Save candidate name (inline edit) ────────────────────
+  async function saveName(input) {
+    const sfId = input.dataset.sfid;
+    const name = input.value.trim();
+    // PATCH endpoint updates session_feeds.candidate_name
+    await fetch(`/api/sessions/${currentSessionId}/attendance/${sfId}`, {
+      method:  'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ candidate_name: name || null })
+    });
+  }
+
+  // ── End session ───────────────────────────────────────────
+  async function endSession() {
+    if (!currentSessionId) return;
+    if (!confirm('End this session? Cameras will need to reconnect for the next one.')) return;
+
+    // Clear all sections immediately before the API call completes
+    // so the user sees empty tables rather than stale data
+    clearAllSections();
+    document.getElementById('session-banner').style.display = 'none';
+
+    const res  = await fetch(`/api/sessions/${currentSessionId}/end`, { method: 'PUT' });
+    const data = await res.json();
+
+    if (res.ok) {
+      currentSessionId = null;
+      isHistorical     = false;
+      loadStats(); // reload — will show "No active session" state
+    } else {
+      alert('Error: ' + data.error);
+      loadStats(); // reload to restore correct state
+    }
+  }
+
+  // ── Auto-refresh ──────────────────────────────────────────
+  // Only auto-refresh for active sessions. Historical sessions
+  // don't change so there's no point polling them.
+  function startRefresh() {
+    stopRefresh();
+    refreshTimer = setInterval(() => {
+      if (!isHistorical) loadStats();
+    }, 10000);
+  }
+
+  function stopRefresh() {
+    if (refreshTimer) { clearInterval(refreshTimer); refreshTimer = null; }
+  }
+
+  // ── Init ──────────────────────────────────────────────────
+  // Clear sections before first load to avoid flash of loading state
+  clearAllSections();
   loadStats();
-  setInterval(loadStats, 10000);
+  startRefresh();
 </script>
 </body>
 </html>

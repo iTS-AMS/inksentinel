@@ -11,12 +11,8 @@ const PUBLIC    = path.join(__dirname, '..', '..', 'public');
 
 const page = (name) => path.join(PUBLIC, `${name}.html`);
 
-// redirect root to dashboard
-router.get('/', requireAuth, (req, res) => {
-  res.redirect('/dashboard');
-});
+router.get('/', requireAuth, (req, res) => res.redirect('/dashboard'));
 
-// login page — redirect to dashboard if already logged in
 router.get('/login', (req, res) => {
   try {
     jwt.verify(req.cookies?.token, process.env.JWT_SECRET);
@@ -26,10 +22,16 @@ router.get('/login', (req, res) => {
   }
 });
 
-// protected pages
 router.get('/dashboard',     requireAuth, (req, res) => res.sendFile(page('dashboard')));
 router.get('/session',       requireAuth, (req, res) => res.sendFile(page('session')));
 router.get('/incidents',     requireAuth, (req, res) => res.sendFile(page('incidents')));
 router.get('/candidate/:id', requireAuth, (req, res) => res.sendFile(page('candidate')));
+router.get('/camera',        requireAuth, (req, res) => res.sendFile(page('camera')));
+router.get('/history',       requireAuth, (req, res) => res.sendFile(page('history')));
+router.get('/sessions',      requireAuth, (req, res) => res.redirect('/allsessions'));
+router.get('/allsessions',   requireAuth, (req, res) => res.sendFile(page('allsessions')));
+router.get('/pen',           requireAuth, (req, res) =>
+  res.sendFile(path.join(PUBLIC, 'penapp', 'index.html'))
+);
 
 export default router;

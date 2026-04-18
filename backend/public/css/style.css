@@ -282,3 +282,149 @@ label {
 
 /* ── Animations ──────────────────────────────────────────── */
 @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+
+
+
+
+/* ════════════════════════════════════════════════════════════
+   REPLACE the previous style additions block at the bottom
+   of public/css/style.css with this entire block.
+   ════════════════════════════════════════════════════════════
+
+   STICKY SIDEBAR — why previous version didn't work:
+   The original .layout had min-height:100vh but no explicit
+   height, and .main had overflow:auto which creates a new
+   scroll container. Sticky only works relative to the nearest
+   scrolling ancestor. If that ancestor is <body> or <html>,
+   we need the sidebar to scroll with the page, not the .main.
+
+   Fix: make <body> / <html> the scroll container (default),
+   remove overflow from .main, and use position:sticky on
+   .sidebar with top:0 and height:100vh.
+   ════════════════════════════════════════════════════════════ */
+
+/* Ensure the page scrolls on the root, not inside .main */
+html, body {
+  height: 100%;
+  overflow: auto; /* scroll happens here, not in .main */
+}
+
+.layout {
+  display: flex;
+  min-height: 100vh;
+  align-items: flex-start; /* critical — stretch breaks sticky */
+}
+
+/* Remove any overflow:auto from .main that creates a sub-scroll container */
+.main {
+  flex: 1;
+  padding: 28px 30px;
+  /* NO overflow property here — page scroll must stay on body */
+  min-width: 0; /* prevents flex overflow on narrow screens */
+}
+
+/* Sticky sidebar */
+.sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;   /* allows sidebar nav to scroll if it overflows */
+  flex-shrink: 0;
+  transition: width 0.2s ease, min-width 0.2s ease;
+}
+
+/* ── Toggle button ─────────────────────────────────────────── */
+.sidebar-toggle-btn {
+  width: 100%;
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--t3);
+  font-size: 10px;
+  cursor: pointer;
+  font-family: var(--fm);
+  transition: all 0.12s;
+}
+.sidebar-toggle-btn:hover {
+  color: var(--accent);
+  border-color: rgba(0,212,255,0.3);
+}
+
+/* sidebar-footer: column so toggle sits below logout */
+.sidebar-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  /* stick to bottom of sidebar */
+  margin-top: auto;
+}
+
+/* ── Collapsed state ───────────────────────────────────────── */
+.sidebar.collapsed {
+  width: 52px;
+  min-width: 52px;
+}
+
+.sidebar.collapsed .logo-text,
+.sidebar.collapsed .nav-label {
+  display: none;
+}
+
+.sidebar.collapsed .logo {
+  justify-content: center;
+  padding: 22px 0;
+}
+.sidebar.collapsed .nav a {
+  justify-content: center;
+  padding: 10px 0;
+}
+.sidebar.collapsed .nav a.active {
+  border-left: 2px solid var(--accent);
+  padding-left: 0;
+}
+.sidebar.collapsed .sidebar-footer {
+  padding: 12px 8px;
+}
+.sidebar.collapsed .logout-btn {
+  justify-content: center;
+  padding: 7px 0;
+}
+
+/* ── Nav icon/label helpers ─────────────────────────────────── */
+.nav-icon  { flex-shrink: 0; }
+.nav-label { white-space: nowrap; overflow: hidden; }
+
+/* ── Session banner ──────────────────────────────────────────── */
+.session-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: var(--adim);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 16px;
+  font-size: 12px;
+}
+.session-banner .session-name {
+  font-family: var(--fd);
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--accent);
+  letter-spacing: 0.06em;
+}
+.session-banner .session-meta { color: var(--t2); }
+.session-banner .session-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 6px var(--green);
+  flex-shrink: 0;
+}
+
