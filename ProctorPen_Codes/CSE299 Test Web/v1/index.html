@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Proctopen</title>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════
+     PAGE 1 — Landing
+══════════════════════════════════════════ -->
+<div id="page-landing" class="page">
+  <div class="landing-wrap">
+
+    <div class="landing-head">
+      <div class="brand">Proctopen</div>
+      <button class="theme-pill" id="theme-btn-1">Toggle theme</button>
+    </div>
+
+    <p class="landing-sub">Select how you are connecting to the central unit</p>
+
+    <div class="mode-grid">
+
+      <button class="mode-card" data-pick="ble">
+        <span class="mode-icon">⬡</span>
+        <span class="mode-title">Bluetooth</span>
+        <span class="mode-desc">Connect via Web Bluetooth. Wemos units connect to the ESP32 over WiFi automatically.</span>
+      </button>
+
+      <button class="mode-card" data-pick="ap">
+        <span class="mode-icon">◈</span>
+        <span class="mode-title">WiFi — Access Point</span>
+        <span class="mode-desc">ESP32 hosts its own hotspot. Join <code>Proctopen</code> on this device to connect.</span>
+      </button>
+
+      <button class="mode-card" data-pick="sta">
+        <span class="mode-icon">◎</span>
+        <span class="mode-title">WiFi — Station</span>
+        <span class="mode-desc">ESP32 joins your router. Connect this device to the same network.</span>
+      </button>
+
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     PAGE 2 — Setup / instructions
+══════════════════════════════════════════ -->
+<div id="page-setup" class="page hidden">
+  <div class="setup-wrap">
+
+    <div class="setup-topbar">
+      <button class="back-btn" id="back-btn">← Back</button>
+      <span class="brand small">Proctopen</span>
+      <button class="theme-pill" id="theme-btn-2">Toggle theme</button>
+    </div>
+
+    <!-- BLE -->
+    <div id="sec-ble" class="setup-sec hidden">
+      <h1>Bluetooth</h1>
+      <ol class="steps">
+        <li>Press the mode button on the ESP32 until the OLED shows <code>[Bluetooth]</code>.</li>
+        <li>The ESP32's <code>Proctopen</code> WiFi hotspot will still be running for the Wemos units — you do not need to do anything for that.</li>
+        <li>Click <strong>Scan &amp; Connect</strong> below. Your browser will show a Bluetooth device picker — select <strong>Proctopen</strong>.</li>
+      </ol>
+      <div class="info-note">
+        Web Bluetooth requires <strong>Chrome or Edge</strong>. It does not work on Firefox or Safari.
+      </div>
+      <button class="btn-primary wide" id="ble-btn">Scan &amp; Connect</button>
+    </div>
+
+    <!-- AP -->
+    <div id="sec-ap" class="setup-sec hidden">
+      <h1>WiFi — Access Point</h1>
+      <ol class="steps">
+        <li>Press the mode button on the ESP32 until the OLED shows <code>[WiFi AP]</code>.</li>
+        <li>On this device, connect to the WiFi network named <code>Proctopen</code> with password <code>proctopen123</code>.</li>
+        <li>Once connected, click <strong>Connect</strong> below.</li>
+      </ol>
+      <div class="info-note">
+        The Wemos units will also connect to <code>Proctopen</code> automatically. No extra configuration needed.
+      </div>
+      <button class="btn-primary wide" id="ap-btn">Connect</button>
+    </div>
+
+    <!-- STA -->
+    <div id="sec-sta" class="setup-sec hidden">
+      <h1>WiFi — Station</h1>
+      <ol class="steps">
+        <li>Press the mode button on the ESP32 until the OLED shows <code>[WiFi STA]</code>.</li>
+        <li>First time? The ESP32 opens a setup portal. Join <code>Proctopen-Setup</code> WiFi and visit <code>192.168.4.1</code> to enter your router credentials.</li>
+        <li>The ESP32 will reboot and join your router. Connect this device to the same router network.</li>
+        <li>The Wemos units will receive the router credentials automatically from the ESP32 and switch networks on their own.</li>
+        <li>Click <strong>Connect</strong> below.</li>
+      </ol>
+      <div class="info-note">
+        The ESP32's <code>Proctopen</code> hotspot stays running even in STA mode. Wemos units always have a fallback connection path.
+      </div>
+      <button class="btn-primary wide" id="sta-btn">Connect</button>
+    </div>
+
+    <div class="status-row" id="setup-status-row">
+      <span class="dot" id="setup-dot"></span>
+      <span id="setup-status-text">Not connected</span>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     PAGE 3 — Dashboard
+══════════════════════════════════════════ -->
+<div id="page-dash" class="page hidden">
+
+  <header>
+    <div class="header-left">
+      <span class="brand small">Proctopen</span>
+      <span class="chip" id="mode-chip">—</span>
+      <span class="chip" id="sta-chip" style="display:none">STA ✓</span>
+    </div>
+    <div class="header-right">
+      <span class="dot connected" id="hdr-dot"></span>
+      <button class="btn-ghost small" id="disconnect-btn">Disconnect</button>
+      <button class="theme-pill" id="theme-btn-3">Theme</button>
+    </div>
+  </header>
+
+  <main>
+
+    <!-- Exam controls -->
+    <section class="card">
+      <h2 class="card-title">Exam</h2>
+
+      <div class="duration-row">
+        <div class="dur-group">
+          <label class="field-label">Duration</label>
+          <div class="dur-inputs">
+            <input id="inp-h" type="number" min="0" max="23" value="0" title="Hours"/>
+            <span class="dur-sep">h</span>
+            <input id="inp-m" type="number" min="0" max="59" value="90" title="Minutes"/>
+            <span class="dur-sep">m</span>
+            <input id="inp-s" type="number" min="0" max="59" value="0" title="Seconds"/>
+            <span class="dur-sep">s</span>
+          </div>
+        </div>
+        <button class="btn-secondary" id="set-timer-btn">Set Timer</button>
+      </div>
+
+      <div class="big-timer" id="big-timer">--:--</div>
+
+      <div class="exam-btns">
+        <button class="btn-green"  id="start-btn">▶ Start</button>
+        <button class="btn-amber"  id="pause-btn">⏸ Pause</button>
+        <button class="btn-red"    id="end-btn">⏹ End</button>
+        <button class="btn-ghost"  id="reset-btn">↺ Reset</button>
+      </div>
+    </section>
+
+    <!-- Connected units -->
+    <section class="card">
+      <h2 class="card-title">
+        Connected units
+        <span class="chip" id="unit-count">0</span>
+      </h2>
+      <div id="units-list">
+        <p class="empty-note">No units connected yet.</p>
+      </div>
+    </section>
+
+    <!-- Raw JSON -->
+    <section class="card">
+      <h2 class="card-title">Raw command</h2>
+      <p class="field-hint">Send any JSON directly — for testing.</p>
+      <div class="input-row">
+        <input id="raw-inp" type="text" placeholder='{"cmd":"warn","device_id":1}'/>
+        <button class="btn-primary" id="raw-btn">Send</button>
+      </div>
+    </section>
+
+    <!-- Log -->
+    <section class="card">
+      <div class="card-titlebar">
+        <h2 class="card-title">Log</h2>
+        <button class="btn-ghost small" id="clear-log-btn">Clear</button>
+      </div>
+      <div id="log"></div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ══════════════════════════════════════════
+     Unit action modal
+══════════════════════════════════════════ -->
+<div id="modal-bg" class="modal-bg hidden">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="modal-title">Unit actions</h3>
+      <button class="icon-btn" id="modal-close">✕</button>
+    </div>
+    <div class="modal-body">
+
+      <div class="modal-row">
+        <div class="modal-row-label">
+          <strong>Warn</strong>
+          <span>Flashes LED for 2 minutes</span>
+        </div>
+        <button class="btn-amber" id="m-warn-btn">⚠ Warn</button>
+      </div>
+
+      <div class="modal-row">
+        <div class="modal-row-label">
+          <strong>Disable</strong>
+          <span>0 seconds = indefinite</span>
+        </div>
+        <div class="modal-row-right">
+          <input id="m-punish" type="number" min="0" placeholder="Penalty (s)"/>
+          <button class="btn-red" id="m-disable-btn">Disable</button>
+        </div>
+      </div>
+
+      <div class="modal-row">
+        <div class="modal-row-label">
+          <strong>Enable</strong>
+          <span>Re-enable pen immediately</span>
+        </div>
+        <button class="btn-green" id="m-enable-btn">✓ Enable</button>
+      </div>
+
+      <div class="modal-row">
+        <div class="modal-row-label">
+          <strong>Deduct time</strong>
+          <span>Reduces this unit's timer</span>
+        </div>
+        <div class="modal-row-right">
+          <input id="m-deduct" type="number" min="1" placeholder="Seconds"/>
+          <button class="btn-red" id="m-deduct-btn">Deduct</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
