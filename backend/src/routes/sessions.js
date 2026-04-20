@@ -75,20 +75,32 @@ router.get('/:id/attendance', async (req, res) => {
 });
 
 // PATCH /api/sessions/:id/attendance/:sfId
-// Update candidate_name for a specific attendance row
+// Update candidate_name and/or student_id for an attendance row
 router.patch('/:id/attendance/:sfId', async (req, res) => {
   const sfId  = parseInt(req.params.sfId);
-  const { candidate_name } = req.body;
+  const { candidate_name, student_id } = req.body;
   if (isNaN(sfId)) return res.status(400).json({ error: 'Invalid ID' });
 
   try {
+    const updates = [];
+    const params  = [];
+    if (candidate_name !== undefined) {
+      params.push(candidate_name || null);
+      updates.push('candidate_name = $' + params.length);
+    }
+    if (student_id !== undefined) {
+      params.push(student_id || null);
+      updates.push('student_id = $' + params.length);
+    }
+    if (!updates.length) return res.status(400).json({ error: 'Nothing to update' });
+    params.push(sfId);
     await query(
-      'UPDATE session_feeds SET candidate_name = $1 WHERE id = $2',
-      [candidate_name || null, sfId]
+      'UPDATE session_feeds SET ' + updates.join(', ') + ' WHERE id = $' + params.length,
+      params
     );
     res.json({ updated: true });
   } catch (err) {
-    console.error('[Sessions] Name update error:', err.message);
+    console.error('[Sessions] Attendance update error:', err.message);
     res.status(500).json({ error: 'Database error' });
   }
 });

@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Proctor — Students</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .student-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      font-size: 10px;
+      font-family: var(--fm);
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      border-radius: 3px;
+      background: var(--adim);
+      color: var(--accent);
+      border: 1px solid rgba(0,212,255,0.2);
+    }
+    .pagination {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 16px 0;
+    }
+    .page-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--t2);
+      font-size: 12px;
+      font-family: var(--fm);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.12s;
+    }
+    .page-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .page-btn.active {
+      background: var(--adim);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .page-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+    .search-wrap {
+      position: relative;
+    }
+    .search-wrap input { padding-left: 34px; }
+    .search-icon {
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 14px;
+      color: var(--t3);
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+<div class="layout">
+  <div id="sidebar" style="min-width:200px;width:200px;flex-shrink:0"></div>
+
+  <main class="main">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Students</div>
+        <div class="page-sub" id="student-count">Loading...</div>
+      </div>
+      <div style="font-size:11px;color:var(--t3)">
+        Read-only — add students via PostgreSQL only
+      </div>
+    </div>
+
+    <!-- Search + filter bar -->
+    <div style="display:flex;gap:10px;margin-bottom:16px;align-items:center">
+
+      <div class="search-wrap" style="flex:1">
+        <span class="search-icon">⌕</span>
+        <input class="input" id="search-input" type="text"
+          placeholder="Search by name or student ID..."
+          oninput="onSearch()">
+      </div>
+
+      <select class="input" id="section-filter"
+        style="padding:8px 10px;font-size:12px;width:220px">
+        <option value="">All sections</option>
+      </select>
+
+    </div>
+
+    <!-- Students table -->
+    <div class="card" style="padding:0;overflow:hidden">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Student ID</th>
+            <th>Course / Section</th>
+            <th>Seat</th>
+            <th>Pen Unit</th>
+            <th>Email</th>
+          </tr>
+        </thead>
+        <tbody id="students-tbody">
+          <tr>
+            <td colspan="6"
+              style="color:var(--t3);text-align:center;padding:32px">
+              Loading...
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination" id="pagination"></div>
+
+  </main>
+</div>
+
+<script src="/js/nav.js"></script>
+<script>
+  document.getElementById('sidebar').innerHTML = buildSidebar();
+  initSidebar();
+
+  // ── State ─────────────────────────────────────────────
+  let currentPage  = 1;
+  let totalPages   = 1;
+  let searchQuery  = '';
+  let sectionFilter = '';
+  let searchTimer  = null;
+
+  // ── Bootstrap ─────────────────────────────────────────
+  async function init() {
+    await loadSectionFilter();
+    loadStudents();
+  }
+
+  // ── Populate section filter dropdown ──────────────────
+  async function loadSectionFilter() {
+    const data = await api('/api/sessions'); // reuse sessions to get section names
+    // Actually fetch sections directly from students unique sections
+    // (we don't have a /api/sections endpoint yet — derive from student data)
+    const allRes = await fetch('/api/students?limit=50', { credentials: 'include' });
+    const all    = await allRes.json();
+    const seen   = new Map();
+
+    (all.students || []).forEach(s => {
+      if (s.course_code && s.section_name) {
+        const key   = `${s.course_code}/${s.section_name}`;
+        const label = `${s.course_code}/${s.section_name} — ${s.instructor_initials || ''}`;
+        if (!seen.has(key)) seen.set(key, label);
+      }
+    });
+
+    const sel = document.getElementById('section-filter');
+    [...seen.entries()].sort().forEach(([key, label]) => {
+      const opt = document.createElement('option');
+      opt.value = key;  // "CSE299/06"
+      opt.text  = label;
+      sel.appendChild(opt);
+    });
+  }
+
+  // ── Search with 350ms debounce ────────────────────────
+  function onSearch() {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => {
+      currentPage   = 1;
+      searchQuery   = document.getElementById('search-input').value.trim();
+      sectionFilter = document.getElementById('section-filter').value;
+      loadStudents();
+    }, 350);
+  }
+
+  document.getElementById('section-filter')
+    .addEventListener('change', onSearch);
+
+  // ── Fetch and render students ─────────────────────────
+  async function loadStudents() {
+    const params = new URLSearchParams({
+      page:  currentPage,
+      limit: 20,
+      q:     searchQuery,
+    });
+
+    const res  = await fetch(`/api/students?${params}`, { credentials: 'include' });
+    const data = await res.json();
+
+    const students = data.students   || [];
+    const pag      = data.pagination || { total: 0, pages: 1 };
+
+    totalPages = pag.pages || 1;
+    document.getElementById('student-count').textContent =
+      `${pag.total} student${pag.total !== 1 ? 's' : ''} found`;
+
+    renderTable(students);
+    renderPagination(pag);
+  }
+
+  // ── Render table rows ─────────────────────────────────
+  function renderTable(students) {
+    const tbody = document.getElementById('students-tbody');
+
+    if (students.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="6"
+            style="color:var(--t3);text-align:center;padding:32px">
+            No students found
+          </td>
+        </tr>`;
+      return;
+    }
+
+    tbody.innerHTML = students.map(s => {
+      const section = s.course_code && s.section_name
+        ? `<span class="student-badge">${s.course_code}/${s.section_name}</span>`
+        : '<span style="color:var(--t3)">—</span>';
+
+      return `<tr>
+        <td style="font-weight:600">${s.name}</td>
+        <td style="font-family:var(--fm);font-size:12px;color:var(--accent)">
+          ${s.student_id}
+        </td>
+        <td>${section}</td>
+        <td style="color:var(--t2)">${s.seat_number || '—'}</td>
+        <td style="color:var(--t2);font-family:var(--fm)">
+          ${s.pen_unit_id ? `Unit #${s.pen_unit_id}` : '—'}
+        </td>
+        <td style="font-size:11px;color:var(--t3)">${s.email || '—'}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  // ── Pagination controls ───────────────────────────────
+  function renderPagination(pag) {
+    const wrap = document.getElementById('pagination');
+    if (pag.pages <= 1) { wrap.innerHTML = ''; return; }
+
+    let html = `
+      <button class="page-btn"
+        onclick="goPage(${currentPage - 1})"
+        ${currentPage <= 1 ? 'disabled' : ''}>
+        ‹
+      </button>`;
+
+    // Show max 7 page buttons with ellipsis
+    const maxButtons = 7;
+    let start = Math.max(1, currentPage - 3);
+    let end   = Math.min(pag.pages, start + maxButtons - 1);
+    if (end - start < maxButtons - 1) start = Math.max(1, end - maxButtons + 1);
+
+    if (start > 1) {
+      html += `<button class="page-btn" onclick="goPage(1)">1</button>`;
+      if (start > 2) html += `<span style="color:var(--t3);padding:0 4px">…</span>`;
+    }
+
+    for (let p = start; p <= end; p++) {
+      html += `<button class="page-btn ${p === currentPage ? 'active' : ''}"
+        onclick="goPage(${p})">${p}</button>`;
+    }
+
+    if (end < pag.pages) {
+      if (end < pag.pages - 1) html += `<span style="color:var(--t3);padding:0 4px">…</span>`;
+      html += `<button class="page-btn" onclick="goPage(${pag.pages})">${pag.pages}</button>`;
+    }
+
+    html += `
+      <button class="page-btn"
+        onclick="goPage(${currentPage + 1})"
+        ${currentPage >= pag.pages ? 'disabled' : ''}>
+        ›
+      </button>`;
+
+    wrap.innerHTML = html;
+  }
+
+  function goPage(p) {
+    if (p < 1 || p > totalPages) return;
+    currentPage = p;
+    loadStudents();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // ── Init ──────────────────────────────────────────────
+  init();
+</script>
+</body>
+</html>

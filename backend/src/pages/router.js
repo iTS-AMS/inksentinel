@@ -33,5 +33,6 @@ router.get('/allsessions',   requireAuth, (req, res) => res.sendFile(page('allse
 router.get('/pen',           requireAuth, (req, res) =>
   res.sendFile(path.join(PUBLIC, 'penapp', 'index.html'))
 );
+router.get('/students-list', requireAuth, (req, res) => res.sendFile(page('students-list')));
 
 export default router;

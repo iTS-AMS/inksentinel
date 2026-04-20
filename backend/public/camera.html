@@ -3,358 +3,340 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>InkSentinel — Camera</title>
+  <title>Proctor — Camera</title>
+  <link rel="stylesheet" href="/css/style.css">
   <style>
-    * { margin:0; padding:0; box-sizing:border-box; }
-    body {
-      background: #07080d;
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      min-height: 100vh; font-family: monospace;
-      color: #e2e8f0;
-    }
-
-    #setup {
-      display: flex; flex-direction: column;
-      align-items: center; gap: 12px;
-      padding: 32px;
-      background: #0d1117;
-      border: 1px solid rgba(0,212,255,0.15);
-      border-radius: 14px;
-      width: 340px;
-    }
-    #setup.hidden { display: none; }
-
-    .logo { font-size: 32px; color: #00d4ff; margin-bottom: 8px; }
-    .title {
-      font-size: 18px; font-weight: 700;
-      letter-spacing: 0.18em; color: #e2e8f0;
-    }
-    .sub { font-size: 10px; color: #445566; letter-spacing: 0.10em; margin-bottom: 4px; }
-
-    input[type=text], select {
-      width: 100%; background: #131920;
-      border: 1px solid rgba(0,212,255,0.15);
-      border-radius: 4px; color: #e2e8f0;
-      padding: 10px 14px; font-family: monospace;
-      font-size: 13px; outline: none;
-      text-align: center;
-    }
-    input[type=text]:focus,
-    select:focus { border-color: #00d4ff; }
-
-    select option { background: #131920; color: #e2e8f0; }
-
-    /* camera select label */
-    .field-label {
-      font-size: 10px; letter-spacing: 0.10em;
-      color: #445566; align-self: flex-start;
-      margin-bottom: -6px;
-    }
-
-    button {
-      width: 100%; background: #00d4ff;
-      color: #07080d; border: none;
-      border-radius: 4px; padding: 11px;
-      font-family: monospace; font-size: 13px;
-      font-weight: 700; letter-spacing: 0.08em;
-      cursor: pointer; transition: background 0.15s;
-    }
-    button:hover { background: #33ddff; }
-    button:disabled { opacity: 0.5; cursor: not-allowed; }
-
-    #led-wrap {
+    /* ── Camera ID display — shown after WS connects ────── */
+    #cam-id-card {
       display: none;
+      padding: 20px 24px;
+      background: var(--adim);
+      border: 1.5px solid var(--accent);
+      border-radius: 12px;
+      margin-bottom: 16px;
+    }
+    .cam-id-label {
+      font-size: 11px;
+      color: var(--t3);
+      letter-spacing: 0.10em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .cam-id-value {
+      font-family: var(--fm);
+      font-size: 2.4rem;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      color: var(--accent);
+      line-height: 1;
+      margin-bottom: 12px;
+    }
+    .cam-id-hint {
+      font-size: 11px;
+      color: var(--t3);
+      line-height: 1.5;
+    }
+    #copy-btn {
+      margin-top: 10px;
+      padding: 6px 16px;
+      font-size: 11px;
+    }
+    #copy-btn.copied {
+      color: var(--green);
+      border-color: var(--green);
+    }
+
+    /* ── Video preview ──────────────────────────────────── */
+    #video-wrap {
+      width: 100%;
+      aspect-ratio: 4/3;
+      background: #0d1117;
+      border-radius: 10px;
+      overflow: hidden;
+      position: relative;
+      margin-bottom: 16px;
+    }
+    #video-preview {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: none;
+    }
+    #video-placeholder {
+      position: absolute;
+      inset: 0;
+      display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 16px;
+      justify-content: center;
+      gap: 8px;
+      color: var(--t3);
+      font-size: 12px;
     }
-    #led-wrap.visible { display: flex; }
-
-    #led {
-      width: 100px; height: 100px;
+    .cam-status-dot {
+      width: 8px;
+      height: 8px;
       border-radius: 50%;
-      background: #1a2a1a;
-      box-shadow: 0 0 30px rgba(0,200,83,0.3);
-      transition: all 0.3s;
+      background: var(--t3);
+      display: inline-block;
+      margin-right: 6px;
     }
-    #led.clear      { background:#1a2a1a; box-shadow: 0 0 30px rgba(0,200,83,0.3); }
-    #led.alert      { background:#2a0000; box-shadow: 0 0 50px rgba(255,59,59,0.8); animation: alertPulse 1s infinite; }
-    #led.connecting { background:#1a1a00; box-shadow: 0 0 20px rgba(255,220,0,0.4); animation: blink 1s infinite; }
-
-    @keyframes blink      { 0%,100%{opacity:1} 50%{opacity:0.3} }
-    @keyframes alertPulse { 0%,100%{opacity:1} 50%{opacity:0.6} }
-
-    #status-text  { font-size: 12px; letter-spacing: 0.10em; color: #8899aa; }
-    #detect-text  { font-size: 11px; letter-spacing: 0.06em; color: #ff3b3b; min-height: 16px; }
-    #feed-label   { font-size: 14px; font-weight: 700; letter-spacing: 0.08em; color: #00d4ff; }
-    #camera-info  { font-size: 10px; color: #445566; letter-spacing: 0.06em; }
-
-    video, canvas { display: none; }
-
-    #disconnect-btn {
-      width: 160px !important;
-      background: transparent !important;
-      border: 1px solid rgba(255,59,59,0.4) !important;
-      color: #ff3b3b !important;
-      padding: 8px 16px !important;
-      font-size: 11px !important;
-      letter-spacing: 0.08em !important;
-    }
-    #disconnect-btn:hover {
-      background: rgba(255,59,59,0.1) !important;
+    .cam-status-dot.live {
+      background: var(--green);
+      box-shadow: 0 0 6px var(--green);
     }
   </style>
 </head>
 <body>
+<div class="layout">
+  <div id="sidebar" style="min-width:200px;width:200px;flex-shrink:0"></div>
 
-<!-- Setup screen -->
-<div id="setup">
-  <div class="logo">◈</div>
-  <div class="title">INKSENTINEL</div>
-  <div class="sub">CAMERA DEVICE</div>
+  <main class="main" style="max-width:520px">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Camera</div>
+        <div class="page-sub" id="cam-sub">Set up your webcam feed</div>
+      </div>
+    </div>
 
-  <input type="text" id="label-input"
-    placeholder="Seat label e.g. Seat 01"
-    maxlength="40">
+    <!-- ── Step 1: Config ─────────────────────────────── -->
+    <div class="card" id="config-card">
+      <div class="card-title">Setup</div>
 
-  <span class="field-label">Camera device</span>
-  <select id="camera-select">
-    <option value="">— detecting cameras... —</option>
-  </select>
+      <div class="filter-group" style="margin-bottom:12px">
+        <label style="font-size:11px;color:var(--t3);display:block;margin-bottom:6px">
+          Camera device
+        </label>
+        <select class="input" id="device-select" style="padding:8px 10px;font-size:13px">
+          <option value="">Loading cameras...</option>
+        </select>
+      </div>
 
-  <button id="start-btn" onclick="startCamera()" disabled>
-    START CAMERA
-  </button>
+      <div class="filter-group" style="margin-bottom:16px">
+        <label style="font-size:11px;color:var(--t3);display:block;margin-bottom:6px">
+          Seat label (e.g. Seat 01)
+        </label>
+        <input class="input" id="seat-label" type="text"
+          placeholder="Seat 01" maxlength="30"
+          style="font-size:13px">
+      </div>
+
+      <button class="btn btn-primary" id="start-btn"
+        style="width:100%;padding:10px">
+        ▶ Start Camera
+      </button>
+    </div>
+
+    <!-- ── Cam ID card (shown after connect) ──────────── -->
+    <div id="cam-id-card">
+      <div class="cam-id-label">Camera ID — share with proctor</div>
+      <div class="cam-id-value" id="cam-id-display">—</div>
+      <div class="cam-id-hint">
+        The proctor types this ID into the seat card in the Proctopen dashboard
+        to link this camera to a specific seat.
+      </div>
+      <button class="btn btn-ghost" id="copy-btn">⧉ Copy ID</button>
+    </div>
+
+    <!-- ── Video preview ─────────────────────────────── -->
+    <div id="video-wrap">
+      <video id="video-preview" autoplay muted playsinline></video>
+      <div id="video-placeholder">
+        <div style="font-size:32px;opacity:0.3">◈</div>
+        <span>Camera not started</span>
+      </div>
+    </div>
+
+    <!-- ── Status + controls ──────────────────────────── -->
+    <div class="card" id="status-card" style="display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <span class="cam-status-dot live" id="status-dot"></span>
+          <span style="font-size:13px;font-weight:600" id="status-text">LIVE</span>
+          <span style="font-size:11px;color:var(--t3);margin-left:8px"
+            id="fps-display"></span>
+        </div>
+        <button class="btn btn-danger" id="stop-btn"
+          style="font-size:11px;padding:5px 14px">
+          ⏹ Stop
+        </button>
+      </div>
+    </div>
+
+  </main>
 </div>
 
-<!-- Live screen -->
-<div id="led-wrap">
-  <div id="led" class="connecting"></div>
-  <div id="feed-label">—</div>
-  <div id="camera-info">—</div>
-  <div id="status-text">Connecting...</div>
-  <div id="detect-text"></div>
-  <button id="disconnect-btn" onclick="disconnectCamera()">
-    ⏹ DISCONNECT
-  </button>
-</div>
-
-<video id="video" autoplay playsinline muted></video>
-<canvas id="canvas"></canvas>
-
+<script src="/js/nav.js"></script>
 <script>
-  const SERVER   = window.location.origin
-    .replace('http://', 'ws://')
-    .replace('https://', 'wss://');
+  document.getElementById('sidebar').innerHTML = buildSidebar();
+  initSidebar();
 
-  const SEND_FPS = 10;
+  // ── State ─────────────────────────────────────────────
+  let stream    = null;  // MediaStream
+  let ws        = null;  // WebSocket to backend
+  let canvas    = null;  // offscreen canvas for frame capture
+  let sendTimer = null;  // setInterval for frame send loop
+  let camId     = null;  // assigned camera_id from backend
+  const FPS     = 10;
 
-  let ws            = null;
-  let sendInterval  = null;
-  let currentLabel  = '';
-  let selectedDeviceId = null;
-
-  const video  = document.getElementById('video');
-  const canvas = document.getElementById('canvas');
-  const ctx    = canvas.getContext('2d');
-  const select = document.getElementById('camera-select');
-  const startBtn = document.getElementById('start-btn');
-
-  // ── Enumerate cameras on page load ─────────────────────────
-  // We need to request permission first before labels are visible.
-  // Strategy: request a throwaway stream, enumerate, then stop it.
-  async function populateCameraList() {
-    try {
-      // Temporary stream just to unlock device labels
-      const tmp = await navigator.mediaDevices.getUserMedia({ video: true });
-      tmp.getTracks().forEach(t => t.stop());
-    } catch (_) {
-      // Permission denied — list will show generic names
-    }
-
+  // ── Populate camera device list ───────────────────────
+  async function populateDevices() {
+    await navigator.mediaDevices.getUserMedia({ video: true }).catch(() => {});
     const devices = await navigator.mediaDevices.enumerateDevices();
-    const cameras = devices.filter(d => d.kind === 'videoinput');
+    const sel     = document.getElementById('device-select');
+    sel.innerHTML = '';
+    const cams    = devices.filter(d => d.kind === 'videoinput');
+    if (cams.length === 0) {
+      sel.innerHTML = '<option>No cameras found</option>';
+      return;
+    }
+    cams.forEach((d, i) => {
+      const opt = document.createElement('option');
+      opt.value = d.deviceId;
+      opt.text  = d.label || `Camera ${i + 1}`;
+      sel.appendChild(opt);
+    });
+  }
 
-    select.innerHTML = '';
+  populateDevices();
 
-    if (cameras.length === 0) {
-      select.innerHTML = '<option value="">No cameras found</option>';
+  // ── Start camera ──────────────────────────────────────
+  document.getElementById('start-btn').addEventListener('click', async () => {
+    const label    = document.getElementById('seat-label').value.trim();
+    const deviceId = document.getElementById('device-select').value;
+
+    if (!label) {
+      alert('Enter a seat label first');
       return;
     }
 
-    cameras.forEach((cam, i) => {
-      const opt   = document.createElement('option');
-      opt.value   = cam.deviceId;
-      // label is available after permission granted
-      opt.text    = cam.label || `Camera ${i + 1}`;
-      select.appendChild(opt);
+    // Start webcam
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { deviceId: deviceId ? { exact: deviceId } : undefined,
+               width: 640, height: 480 }
     });
 
-    // pre-select first camera
-    selectedDeviceId = cameras[0].deviceId;
-    startBtn.disabled = false;
-  }
+    const video = document.getElementById('video-preview');
+    video.srcObject = stream;
+    video.style.display = 'block';
+    document.getElementById('video-placeholder').style.display = 'none';
 
-  select.addEventListener('change', () => {
-    selectedDeviceId = select.value;
-  });
+    // Setup offscreen canvas for JPEG encoding
+    canvas = document.createElement('canvas');
+    canvas.width  = 640;
+    canvas.height = 480;
 
-  // ── Start camera ────────────────────────────────────────────
-  async function startCamera() {
-    currentLabel = document.getElementById('label-input').value.trim();
-    if (!currentLabel) {
-      alert('Please enter a seat label');
-      return;
-    }
-    if (!selectedDeviceId) {
-      alert('Please select a camera');
-      return;
-    }
-
-    startBtn.disabled    = true;
-    startBtn.textContent = 'Starting...';
-
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          deviceId: { exact: selectedDeviceId },
-          width: 1280, height: 720
-        },
-        audio: false
-      });
-
-      video.srcObject = stream;
-      await video.play();
-
-      canvas.width  = video.videoWidth  || 1280;
-      canvas.height = video.videoHeight || 720;
-
-      // Show which camera is active
-      const activeCam = [...select.options].find(o => o.value === selectedDeviceId);
-      document.getElementById('camera-info').textContent =
-        activeCam ? activeCam.text : 'Camera active';
-
-      document.getElementById('setup').className    = 'hidden';
-      document.getElementById('led-wrap').className = 'visible';
-      document.getElementById('feed-label').textContent = currentLabel;
-
-      setStatus('connecting', 'Connecting to server...', '');
-      connect();
-
-    } catch (err) {
-      startBtn.disabled    = false;
-      startBtn.textContent = 'START CAMERA';
-      alert('Camera error: ' + err.message);
-    }
-  }
-
-  function setStatus(ledClass, status, detect) {
-    document.getElementById('led').className           = ledClass;
-    document.getElementById('status-text').textContent = status;
-    document.getElementById('detect-text').textContent = detect || '';
-  }
-
-  // ── WebSocket ───────────────────────────────────────────────
-  function connect() {
-    const wsUrl = `${SERVER}/ws?role=feed&label=${encodeURIComponent(currentLabel)}`;
+    // Connect WebSocket
+    const wsUrl = `${window.location.origin
+      .replace('http','ws').replace('https','wss')}/ws?role=feed&label=${encodeURIComponent(label)}`;
     ws = new WebSocket(wsUrl);
     ws.binaryType = 'arraybuffer';
 
     ws.onopen = () => {
-      setStatus('clear', 'Live — monitoring', '');
-      startSending();
+      document.getElementById('cam-sub').textContent = `Connected — ${label}`;
+      document.getElementById('status-card').style.display = 'block';
+      document.getElementById('config-card').style.display = 'none';
+
+      // Start streaming frames
+      sendTimer = setInterval(sendFrame, 1000 / FPS);
+
+      // Request cam_id from backend after a short delay
+      // (feed row is created on WS connect, camera_id assigned there)
+      setTimeout(fetchCamId, 800);
     };
 
-    ws.onmessage = (event) => {
+    ws.onmessage = (e) => {
+      // Listen for cam_id assignment from server
       try {
-        const data = JSON.parse(event.data);
-
-        if (data.type === 'signal') {
-          handleSignal(data.signal);
-          return;
-        }
-
-        if (data.type === 'detection') {
-          if (data.detection_count > 0) {
-            const labels = data.detections
-              .map(d => `${d.class} (${(d.confidence * 100).toFixed(0)}%)`)
-              .join(' · ');
-            setStatus('alert', 'Activity detected', labels);
-          } else {
-            setStatus('clear', 'Live — monitoring', '');
-          }
+        const msg = JSON.parse(e.data);
+        if (msg.type === 'cam_id_assigned' && msg.camera_id) {
+          showCamId(msg.camera_id);
         }
       } catch (_) {}
     };
 
     ws.onclose = () => {
-      setStatus('connecting', 'Reconnecting...', '');
-      stopSending();
-      setTimeout(connect, 3000);
+      document.getElementById('cam-sub').textContent = 'Disconnected';
+      const dot = document.getElementById('status-dot');
+      dot.classList.remove('live');
+      document.getElementById('status-text').textContent = 'OFFLINE';
+      if (sendTimer) { clearInterval(sendTimer); sendTimer = null; }
     };
 
-    ws.onerror = () => ws.close();
+    ws.onerror = () => {
+      alert('WebSocket connection failed. Is the Node.js server running?');
+    };
+  });
+
+  // ── Send one JPEG frame ───────────────────────────────
+  function sendFrame() {
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    const video = document.getElementById('video-preview');
+    if (video.readyState < 2) return; // not ready
+
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    canvas.toBlob(blob => {
+      if (!blob || ws.readyState !== WebSocket.OPEN) return;
+      blob.arrayBuffer().then(buf => {
+        try { ws.send(buf); } catch (_) {}
+      });
+    }, 'image/jpeg', 0.75);
   }
 
-  // ── Frame sending ───────────────────────────────────────────
-  function startSending() {
-    stopSending();
-    sendInterval = setInterval(() => {
-      if (!ws || ws.readyState !== 1) return;
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      canvas.toBlob(blob => {
-        if (!blob || ws.readyState !== 1) return;
-        blob.arrayBuffer().then(buf => {
-          try { ws.send(buf); } catch (_) {}
-        });
-      }, 'image/jpeg', 0.8);
-    }, 1000 / SEND_FPS);
-  }
-
-  function stopSending() {
-    if (sendInterval) { clearInterval(sendInterval); sendInterval = null; }
-  }
-
-  // ── Signal handler ──────────────────────────────────────────
-  function handleSignal(signal) {
-    if (signal === 'buzzer')    triggerBuzzer();
-    if (signal === 'led_green') setStatus('clear',  'Warning issued', 'Check your behaviour');
-    if (signal === 'led_red')   setStatus('alert',  'STOP', 'Violation flagged by proctor');
-    if (signal === 'led_off')   setStatus('clear',  'Live — monitoring', '');
-  }
-
-  function triggerBuzzer() {
+  // ── Fetch cam_id from the backend feed entry ──────────
+  // The backend assigns a camera_id when the feed row is created.
+  // We poll /api/feeds and match by client_id label.
+  async function fetchCamId() {
+    const label = document.getElementById('seat-label').value.trim();
     try {
-      const actx = new AudioContext();
-      const osc  = actx.createOscillator();
-      const gain = actx.createGain();
-      osc.connect(gain);
-      gain.connect(actx.destination);
-      osc.frequency.value = 880;
-      gain.gain.setValueAtTime(0.4, actx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, actx.currentTime + 0.8);
-      osc.start();
-      osc.stop(actx.currentTime + 0.8);
+      const res   = await fetch('/api/feeds', { credentials: 'include' });
+      const feeds = await res.json();
+      const feed  = feeds.find(f => f.label === label && f.camera_id);
+      if (feed) {
+        showCamId(feed.camera_id);
+      } else {
+        // Retry once more after 1.5s in case DB write is slow
+        setTimeout(fetchCamId, 1500);
+      }
     } catch (_) {}
   }
 
-  // ── Disconnect ──────────────────────────────────────────────
-  function disconnectCamera() {
-    stopSending();
-    if (ws) { ws.onclose = null; ws.close(); ws = null; }
-    if (video.srcObject) {
-      video.srcObject.getTracks().forEach(t => t.stop());
-      video.srcObject = null;
-    }
-    document.getElementById('led-wrap').className = '';
-    document.getElementById('setup').className    = '';
-    startBtn.disabled    = false;
-    startBtn.textContent = 'START CAMERA';
+  function showCamId(id) {
+    camId = id;
+    document.getElementById('cam-id-card').style.display  = 'block';
+    document.getElementById('cam-id-display').textContent = id;
   }
 
-  // ── Init ─────────────────────────────────────────────────────
-  populateCameraList();
+  // ── Copy cam_id to clipboard ──────────────────────────
+  document.getElementById('copy-btn').addEventListener('click', () => {
+    if (!camId) return;
+    navigator.clipboard.writeText(camId).then(() => {
+      const btn = document.getElementById('copy-btn');
+      btn.textContent = '✓ Copied!';
+      btn.classList.add('copied');
+      setTimeout(() => {
+        btn.textContent = '⧉ Copy ID';
+        btn.classList.remove('copied');
+      }, 2000);
+    });
+  });
+
+  // ── Stop camera ───────────────────────────────────────
+  document.getElementById('stop-btn').addEventListener('click', () => {
+    if (sendTimer) { clearInterval(sendTimer); sendTimer = null; }
+    if (ws) { ws.close(); ws = null; }
+    if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+
+    document.getElementById('video-preview').style.display = 'none';
+    document.getElementById('video-preview').srcObject = null;
+    document.getElementById('video-placeholder').style.display = 'flex';
+    document.getElementById('cam-id-card').style.display  = 'none';
+    document.getElementById('status-card').style.display  = 'none';
+    document.getElementById('config-card').style.display  = 'block';
+    document.getElementById('cam-sub').textContent = 'Set up your webcam feed';
+  });
 </script>
 </body>
 </html>

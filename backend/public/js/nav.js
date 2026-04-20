@@ -1,11 +1,12 @@
 // public/js/nav.js
 const PAGES = [
-  { href: '/dashboard',   label: 'Dashboard',    icon: '⊞' },
-  { href: '/session',     label: 'Session',      icon: '◎' },
-  { href: '/allsessions', label: 'All Sessions', icon: '☰' },
-  { href: '/incidents',   label: 'Incidents',    icon: '△' },
-  { href: '/history',     label: 'Sig. History', icon: '◷' },
-  { href: '/pen',         label: 'Pen Control',  icon: '✒' },
+  { href: '/dashboard',     label: 'Dashboard',    icon: '⊞' },
+  { href: '/session',       label: 'Session',      icon: '◎' },
+  { href: '/allsessions',   label: 'All Sessions', icon: '☰' },
+  { href: '/incidents',     label: 'Incidents',    icon: '△' },
+  { href: '/history',       label: 'Sig. History', icon: '◷' },
+  { href: '/pen',           label: 'Pen Control',  icon: '✒' },
+  { href: '/students-list', label: 'Students',     icon: '◫' },
 ];
 
 function buildSidebar() {

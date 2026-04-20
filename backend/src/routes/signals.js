@@ -1,19 +1,27 @@
 // ============================================================
-//  src/routes/signals.js  (v6)
+//  src/routes/signals.js  (v7)
 //
-//  Changes from v5:
-//  - Serial port opening state tracked with `portOpening` flag.
-//    Previously, SerialPort() with autoOpen:true returned the
-//    object immediately, then fired 'error' asynchronously.
-//    getPort() returned the object before error fired, so
-//    p.write() was called on a port in error state. Now we
-//    wait for 'open' event before returning the port, using
-//    a Promise-based initializer. This prevents the "open
-//    attempt on every click" loop.
-//  - Cooldown now resets ONLY after an open attempt resolves
-//    (success or failure), not on every call to getPort().
-//    This ensures the 5s gap is respected regardless of
-//    async error timing.
+//  Changes from v6:
+//  - Imports broadcastJSON from wsHandler.js so it can push
+//    real-time ack messages to all dashboard clients (including
+//    the candidate page) after a confirmed serial write.
+//
+//  - After HTTP 200 path (serial write succeeded): broadcasts
+//    { type: 'signal_ack', cmd, device_id, status: 'delivered' }
+//    This lets candidate.html show a per-unit "Delivered ✓"
+//    confirmation without polling.
+//
+//  - After HTTP 202 path (ESP32 unreachable): broadcasts
+//    { type: 'signal_ack', cmd, device_id, status: 'undelivered' }
+//    So the candidate page still gets a real-time update (amber).
+//
+//  - Serial port 'data' event listener parses JSON echo lines
+//    from ESP32 firmware. When firmware is updated to send acks
+//    (e.g. {"ack":"ok","cmd":"start","unit":1}), this handler
+//    will forward them as { type: 'serial_ack' } WS messages.
+//    Currently a no-op until firmware supports it.
+//
+//  - portOpening flag and async getPort() from v6 unchanged.
 // ============================================================
 
 import 'dotenv/config';
@@ -21,12 +29,15 @@ import { Router }                   from 'express';
 import { query, getActiveSession }  from '../db.js';
 import { requireAuthApi }           from '../middleware/auth.js';
 import { SerialPort }               from 'serialport';
+import { broadcastJSON }            from '../wsHandler.js';
 
 const router = Router();
 router.use(requireAuthApi);
 
 console.log('[Signal] Route loaded — getActiveSession import:',
   typeof getActiveSession === 'function' ? 'OK' : 'MISSING ⚠');
+console.log('[Signal] Route loaded — broadcastJSON import:',
+  typeof broadcastJSON === 'function' ? 'OK' : 'MISSING ⚠');
 
 const VALID_COMMANDS = ['timer','start','pause','end','reset','warn','disable','enable','deduct'];
 const UNIT_COMMANDS  = ['warn','disable','enable','deduct'];
@@ -34,24 +45,65 @@ const NEEDS_DURATION = ['timer'];
 const NEEDS_TIME_MS  = ['deduct'];
 
 // ── Serial port state ────────────────────────────────────────
-let port            = null;   // open SerialPort instance, or null
-let portOpening     = false;  // true while open attempt is in flight
-let lastOpenAttempt = 0;      // timestamp of last attempt start
+let port         = null;
+let portOpening  = false;
+let lastOpenAttempt = 0;
 const REOPEN_COOLDOWN_MS = 5000;
 
-// Returns a ready-to-write SerialPort, or null if unavailable.
-// Uses portOpening flag to prevent concurrent open attempts — the
-// async 'error' event in v5 caused getPort() to return a port
-// object before it had confirmed open, leading to write() on a
-// broken port and bypassing the cooldown.
-async function getPort() {
-  // Already open and healthy — return immediately
-  if (port?.isOpen) return port;
+// Buffer for partial lines coming in from serial
+let serialLineBuf = '';
 
-  // Another open attempt is already in flight — don't stack
+// ── Serial data handler ───────────────────────────────────────
+// Parses newline-delimited JSON from ESP32.
+// Currently logs all incoming lines for debugging.
+// When ESP32 firmware is updated to send ack JSON like:
+//   {"ack":"ok","cmd":"start","unit":1}
+//   {"ack":"ok","cmd":"start","unit":"all"}
+// this function will forward them as WS messages to dashboard
+// clients so candidate.html can show per-unit confirmation.
+function handleSerialData(chunk) {
+  serialLineBuf += chunk.toString();
+  const lines = serialLineBuf.split('\n');
+
+  // Keep the last partial line in the buffer
+  serialLineBuf = lines.pop();
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+
+    console.log(`[Signal] Serial RX: ${trimmed}`);
+
+    // Try to parse as JSON ack from ESP32 firmware
+    try {
+      const msg = JSON.parse(trimmed);
+
+      if (msg.ack) {
+        // Forward to all dashboard clients (including candidate page)
+        // candidate.html listens for type:'serial_ack' to show
+        // per-unit hardware confirmation (future feature once firmware updated)
+        broadcastJSON({
+          type:      'serial_ack',
+          ack:       msg.ack,         // 'ok' | 'err'
+          cmd:       msg.cmd,
+          unit:      msg.unit,        // unit id or 'all'
+          raw:       trimmed,
+        });
+        console.log(`[Signal] Serial ack forwarded: cmd=${msg.cmd} unit=${msg.unit}`);
+      }
+    } catch (_) {
+      // Not JSON — plain ESP32 debug output, already logged above
+    }
+  }
+}
+
+// ── Serial port open — async, waits for 'open' event ─────────
+// Returns a ready port or null. portOpening flag prevents stacking
+// concurrent open attempts (the v5 fix for the freeze bug).
+async function getPort() {
+  if (port?.isOpen) return port;
   if (portOpening) return null;
 
-  // Cooldown — don't retry within 5s of last attempt
   const now = Date.now();
   if (now - lastOpenAttempt < REOPEN_COOLDOWN_MS) return null;
 
@@ -61,10 +113,6 @@ async function getPort() {
     return null;
   }
 
-  // ── Attempt to open port — await the result ───────────────
-  // We wrap in a Promise that resolves on 'open' or rejects on
-  // 'error'. This means getPort() waits for confirmation before
-  // returning, eliminating the async race condition.
   portOpening     = true;
   lastOpenAttempt = now;
 
@@ -73,39 +121,40 @@ async function getPort() {
     try {
       p = new SerialPort({ path: portPath, baudRate: 115200, autoOpen: true });
     } catch (err) {
-      // Synchronous throw (rare — usually async via 'error' event)
       console.error('[Signal] Failed to create SerialPort:', err.message);
       portOpening = false;
       resolve(null);
       return;
     }
 
-    // Resolves with the port instance on successful open
     p.once('open', () => {
       console.log(`[Signal] Serial port ${portPath} opened`);
       port = p;
 
-      // Flush OS buffer to prevent replay of pre-restart commands
+      // Flush OS buffer — prevents replay of pre-restart commands
       p.flush(err => {
         if (err) console.error('[Signal] Flush error:', err.message);
         else     console.log('[Signal] Serial port flushed — buffer cleared');
       });
 
-      // Wire persistent handlers for errors after open
+      // ── Listen for incoming data from ESP32 ───────────────
+      // Handles both debug prints and future ack JSON from firmware
+      p.on('data', handleSerialData);
+
       p.on('error', err => {
         console.error('[Signal] Serial error (post-open):', err.message);
         port = null;
       });
       p.on('close', () => {
         console.log('[Signal] Serial port closed');
-        port = null;
+        port          = null;
+        serialLineBuf = ''; // clear partial buffer on disconnect
       });
 
       portOpening = false;
       resolve(p);
     });
 
-    // Resolves with null on open failure
     p.once('error', err => {
       console.error('[Signal] Serial open error:', err.message);
       portOpening = false;
@@ -156,12 +205,11 @@ router.post('/', async (req, res) => {
 
   const session   = await getActiveSession();
   const sessionId = session?.id || null;
-
-  if (!sessionId) {
+  if (!sessionId)
     console.warn('[Signal] No active session — signal stored as legacy');
-  }
 
   try {
+    // Always log to DB first, regardless of ESP32 state
     await query(
       `INSERT INTO signals (session_id, signal, params, sent_by)
        VALUES ($1, $2, $3, $4)`,
@@ -169,11 +217,35 @@ router.post('/', async (req, res) => {
     );
     console.log(`[Signal] ${req.user.username} sent (session=${sessionId}):`, esp32Payload);
 
+    // ── Try to deliver to ESP32 ───────────────────────────
     await sendToESP32(esp32Payload);
+
+    // ── HTTP 200: serial write confirmed ──────────────────
+    // Broadcast signal_ack so candidate.html can show
+    // "Delivered ✓" in real-time without a page refresh.
+    // unit: device_id for unit commands, 'all' for global ones.
+    broadcastJSON({
+      type:      'signal_ack',
+      status:    'delivered',
+      cmd,
+      unit:      device_id || 'all',
+      duration_ms: duration_ms || null,
+      time_ms:     time_ms     || null,
+    });
+
     res.json({ success: true, sent: esp32Payload });
 
   } catch (err) {
     if (err.message === 'ESP32_UNREACHABLE') {
+      // ── HTTP 202: logged but not delivered ───────────────
+      // Still broadcast so candidate page updates immediately
+      broadcastJSON({
+        type:   'signal_ack',
+        status: 'undelivered',
+        cmd,
+        unit:   device_id || 'all',
+      });
+
       return res.status(202).json({
         warning: 'ESP32 not connected — command logged but not delivered',
         sent:    esp32Payload,

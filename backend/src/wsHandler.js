@@ -281,7 +281,10 @@ function handleDashboardConnection(ws) {
   ws.on('error', () => dashboardClients.delete(ws));
 }
 
-function broadcastJSON(data) {
+// Exported so signals.js can push signal_ack messages to all dashboard
+// clients (including the candidate page open in the proctor's browser)
+// without needing a separate event bus or circular imports.
+export function broadcastJSON(data) {
   const msg = JSON.stringify(data);
   for (const client of [...dashboardClients]) {
     if (client.readyState === 1) {

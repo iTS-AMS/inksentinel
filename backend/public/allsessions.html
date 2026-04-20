@@ -98,8 +98,26 @@
       </span>
     </div>
 
+    <!-- Course dropdown — populated from courses table -->
     <div class="form-field">
-      <label>Course Name</label>
+      <label>Course</label>
+      <select class="input" id="inp-course-select" style="padding:8px 10px;font-size:13px">
+        <option value="">Select course...</option>
+      </select>
+    </div>
+
+    <div class="form-field">
+      <label>Section</label>
+      <select class="input" id="inp-section-select" style="padding:8px 10px;font-size:13px"
+        disabled>
+        <option value="">Select course first</option>
+      </select>
+    </div>
+
+    <!-- Manual override if not in DB -->
+    <div class="form-field">
+      <label>Course Name <span style="font-size:10px;color:var(--t3);font-weight:400">
+        (override — auto-filled from selection above)</span></label>
       <input class="input" id="inp-course" placeholder="e.g. Junior Design Project">
     </div>
 
@@ -111,6 +129,16 @@
     <div class="form-field">
       <label>Time Block</label>
       <input class="input" id="inp-time" placeholder="e.g. 09:00 – 11:00">
+    </div>
+
+    <div class="form-field">
+      <label>Exam Type</label>
+      <select class="input" id="inp-exam-type" style="padding:8px 10px;font-size:13px">
+        <option value="midterm">Midterm</option>
+        <option value="quiz">Quiz</option>
+        <option value="final">Final</option>
+        <option value="mock">Mock</option>
+      </select>
     </div>
 
     <div id="modal-error"
@@ -220,16 +248,88 @@
     document.getElementById('modal').classList.add('open');
     document.getElementById('inp-name').focus();
     document.getElementById('modal-error').style.display = 'none';
+    loadCourseDropdown();
   }
 
   function closeModal() {
     document.getElementById('modal').classList.remove('open');
     ['inp-name','inp-course','inp-instructor','inp-time']
       .forEach(id => { document.getElementById(id).value = ''; });
+    document.getElementById('inp-exam-type').value = 'midterm';
+    document.getElementById('inp-course-select').value = '';
+    document.getElementById('inp-section-select').innerHTML = '<option value="">Select course first</option>';
+    document.getElementById('inp-section-select').disabled = true;
   }
 
   document.getElementById('modal').addEventListener('click', e => {
     if (e.target === document.getElementById('modal')) closeModal();
+  });
+
+  // Load courses for dropdown on modal open
+  async function loadCourseDropdown() {
+    try {
+      const res  = await fetch('/api/students?limit=1', { credentials: 'include' });
+      const data = await res.json();
+      // Fetch distinct courses from students API — reuse the enrolled data
+      const coursesRes = await fetch('/api/students?limit=50&q=', { credentials: 'include' });
+      const cData = await coursesRes.json();
+      const seen  = new Map();
+      (cData.students || []).forEach(s => {
+        if (s.course_code && !seen.has(s.course_code))
+          seen.set(s.course_code, s.course_name || s.course_code);
+      });
+      const sel = document.getElementById('inp-course-select');
+      sel.innerHTML = '<option value="">Select course...</option>';
+      [...seen.entries()].sort().forEach(([code, name]) => {
+        const opt = document.createElement('option');
+        opt.value   = code;
+        opt.dataset.name = name;
+        opt.text    = `${code} — ${name}`;
+        sel.appendChild(opt);
+      });
+    } catch (_) {}
+  }
+
+  document.getElementById('inp-course-select').addEventListener('change', async function() {
+    const code = this.value;
+    const selName = this.options[this.selectedIndex]?.dataset.name || '';
+    if (selName) document.getElementById('inp-course').value = selName;
+
+    const secSel = document.getElementById('inp-section-select');
+    if (!code) {
+      secSel.innerHTML = '<option value="">Select course first</option>';
+      secSel.disabled = true;
+      return;
+    }
+    // Fetch sections for this course from students table
+    secSel.innerHTML = '<option value="">Loading...</option>';
+    secSel.disabled  = false;
+    try {
+      const res  = await fetch(`/api/students?limit=50&q=&section_filter=${encodeURIComponent(code)}`, { credentials: 'include' });
+      const data = await res.json();
+      const seen = new Map();
+      (data.students || []).forEach(s => {
+        if (s.course_code === code && s.section_name) {
+          const key = `${s.section_name}`;
+          if (!seen.has(key)) seen.set(key, { name: key, initials: s.instructor_initials || '' });
+        }
+      });
+      secSel.innerHTML = '<option value="">Select section...</option>';
+      [...seen.values()].sort((a,b) => a.name.localeCompare(b.name)).forEach(sec => {
+        const opt = document.createElement('option');
+        opt.value = sec.name;
+        opt.text  = `Section ${sec.name}${sec.initials ? ' — ' + sec.initials : ''}`;
+        opt.dataset.initials = sec.initials;
+        secSel.appendChild(opt);
+      });
+    } catch (_) {
+      secSel.innerHTML = '<option value="">Could not load sections</option>';
+    }
+  });
+
+  document.getElementById('inp-section-select').addEventListener('change', function() {
+    const initials = this.options[this.selectedIndex]?.dataset.initials || '';
+    if (initials) document.getElementById('inp-instructor').value = initials;
   });
 
   async function createSession() {
@@ -237,6 +337,9 @@
     const course     = document.getElementById('inp-course').value.trim();
     const instructor = document.getElementById('inp-instructor').value.trim();
     const time       = document.getElementById('inp-time').value.trim();
+    const examType   = document.getElementById('inp-exam-type').value;
+    const sectionName = document.getElementById('inp-section-select').value;
+    const courseCode  = document.getElementById('inp-course-select').value;
 
     const errEl = document.getElementById('modal-error');
     if (!name) {
@@ -253,6 +356,7 @@
         course_name:     course     || null,
         instructor_name: instructor || null,
         time_block:      time       || null,
+        exam_type:       examType   || 'midterm',
       })
     });
 

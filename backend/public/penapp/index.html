@@ -3,99 +3,56 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Proctor — Pen Control</title>
-  <!-- 
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Syne:wght@400;600;700&display=swap"/>
-  -->
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=JetBrains+Mono:wght@400;600&family=Syne:wght@400;600;700&display=swap"/>
+  <title>Proctopen</title>
+  <link rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=JetBrains+Mono:wght@400;600&family=Syne:wght@400;600;700&display=swap"/>
   <link rel="stylesheet" href="/penapp/style.css"/>
-
   <style>
-    /* ── InkSentinel sidebar — self-contained, no style.css needed ── */
+    /* ── InkSentinel sidebar ──────────────────────────────── */
     :root {
-      --is-accent:  #00d4ff;
-      --is-adim:    rgba(0, 212, 255, 0.12);
-      --is-border:  rgba(0, 212, 255, 0.10);
-      --is-t2:      #8899aa;
-      --is-t3:      #445566;
+      --is-accent: #00d4ff;
+      --is-adim:   rgba(0,212,255,0.12);
+      --is-border: rgba(0,212,255,0.10);
+      --is-t2:     #8899aa;
+      --is-t3:     #445566;
     }
-
-    .ink-layout {
-      display: flex;
-      min-height: 100vh;
-    }
-
-    /* sidebar */
+    .ink-layout { display: flex; min-height: 100vh; }
     .ink-sidebar {
-      width: 200px;
-      min-width: 200px;
+      width: 200px; min-width: 200px;
       background: #0d1117;
       border-right: 1px solid var(--is-border);
-      display: flex;
-      flex-direction: column;
-      flex-shrink: 0;
-      overflow: hidden;
+      display: flex; flex-direction: column; flex-shrink: 0;
+      position: sticky; top: 0; height: 100vh; overflow: hidden;
       transition: width 0.2s ease, min-width 0.2s ease;
     }
-
-    /* collapsed state */
-    .ink-sidebar.collapsed {
-      width: 52px;
-      min-width: 52px;
-    }
+    .ink-sidebar.collapsed { width: 52px; min-width: 52px; }
     .ink-sidebar.collapsed .ink-logo-text,
-    .ink-sidebar.collapsed .ink-nav-label {
-      display: none;
-    }
-    .ink-sidebar.collapsed .ink-logo {
-      justify-content: center;
-      padding: 22px 0;
-    }
-    .ink-sidebar.collapsed .ink-nav a {
-      justify-content: center;
-      padding: 10px 0;
-    }
+    .ink-sidebar.collapsed .ink-nav-label { display: none; }
+    .ink-sidebar.collapsed .ink-logo { justify-content: center; padding: 22px 0; }
+    .ink-sidebar.collapsed .ink-nav a { justify-content: center; padding: 10px 0; }
     .ink-sidebar.collapsed .ink-nav a.active {
-      padding-left: 0;
+      border-left: 2px solid var(--is-accent); padding-left: 0;
     }
-    .ink-sidebar.collapsed .ink-sidebar-footer {
-      padding: 10px 8px;
-    }
-    .ink-sidebar.collapsed .ink-logout-btn {
-      justify-content: center;
-      font-size: 0;
-      padding: 8px 0;
-    }
-    .ink-sidebar.collapsed .ink-logout-btn .ink-nav-icon {
-      font-size: 14px;
-    }
-
+    .ink-sidebar.collapsed .ink-sidebar-footer { padding: 10px 8px; }
+    .ink-sidebar.collapsed .ink-logout-btn { justify-content: center; font-size: 0; padding: 8px 0; }
+    .ink-sidebar.collapsed .ink-logout-btn .ink-nav-icon { font-size: 14px; }
     .ink-logo {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 22px 20px;
-      border-bottom: 1px solid var(--is-border);
+      display: flex; align-items: center; gap: 10px;
+      padding: 22px 20px; border-bottom: 1px solid var(--is-border);
     }
     .ink-logo-icon { color: var(--is-accent); font-size: 20px; font-family: monospace; }
     .ink-logo-text {
-      font-family: 'Barlow Condensed', 'Syne', sans-serif;
+      font-family: 'Barlow Condensed','Syne',sans-serif;
       font-weight: 800; font-size: 18px;
-      letter-spacing: 0.18em; color: #e2e8f0;
-      white-space: nowrap;
+      letter-spacing: 0.18em; color: #e2e8f0; white-space: nowrap;
     }
-
-    .ink-nav {
-      flex: 1; padding: 12px 10px;
-      display: flex; flex-direction: column; gap: 2px;
-    }
+    .ink-nav { flex: 1; padding: 12px 10px; display: flex; flex-direction: column; gap: 2px; }
     .ink-nav a {
       display: flex; align-items: center; gap: 9px;
       padding: 9px 12px; border-radius: 4px;
       color: var(--is-t2); font-size: 12px;
-      font-family: 'JetBrains Mono', monospace;
-      letter-spacing: 0.05em; text-decoration: none;
-      transition: all 0.12s;
+      font-family: 'JetBrains Mono', monospace; letter-spacing: 0.05em;
+      text-decoration: none; transition: all 0.12s;
     }
     .ink-nav a:hover { color: #e2e8f0; background: var(--is-adim); }
     .ink-nav a.active {
@@ -104,10 +61,8 @@
     }
     .ink-nav-icon  { flex-shrink: 0; }
     .ink-nav-label { white-space: nowrap; overflow: hidden; }
-
     .ink-sidebar-footer {
-      padding: 16px 20px;
-      border-top: 1px solid var(--is-border);
+      padding: 16px 20px; border-top: 1px solid var(--is-border);
       display: flex; flex-direction: column; gap: 6px;
     }
     .ink-logout-btn {
@@ -115,85 +70,176 @@
       padding: 7px 10px; background: transparent;
       border: 1px solid var(--is-border); border-radius: 4px;
       color: var(--is-t2); font-size: 11px; letter-spacing: 0.05em;
-      cursor: pointer; font-family: 'JetBrains Mono', monospace;
-      transition: all 0.12s;
+      cursor: pointer; font-family: 'JetBrains Mono', monospace; transition: all 0.12s;
     }
     .ink-logout-btn:hover { color: #e2e8f0; border-color: rgba(0,212,255,0.3); }
-
-    /* collapse toggle button */
     .ink-toggle-btn {
-      width: 100%;
-      display: flex; align-items: center; justify-content: center;
-      padding: 5px;
-      background: transparent;
+      width: 100%; display: flex; align-items: center; justify-content: center;
+      padding: 5px; background: transparent;
       border: 1px solid var(--is-border); border-radius: 4px;
-      color: var(--is-t3); font-size: 10px;
-      cursor: pointer; font-family: 'JetBrains Mono', monospace;
-      transition: all 0.12s;
+      color: var(--is-t3); font-size: 10px; cursor: pointer;
+      font-family: 'JetBrains Mono', monospace; transition: all 0.12s;
     }
     .ink-toggle-btn:hover { color: var(--is-accent); border-color: rgba(0,212,255,0.3); }
 
-    /* content area */
-    .ink-pen-content {
-      flex: 1;
-      overflow-y: auto;
-      min-width: 0;
-    }
+    .ink-pen-content { flex: 1; overflow-y: auto; min-width: 0; }
     .ink-pen-content .page { min-height: 100vh; }
+
+    /* ── Alert border styles (applied by penapp-ext.js) ──── */
+    .seat-cell { position: relative; transition: border-color 0.4s, box-shadow 0.4s; }
+    .seat-cell.alert-moderate {
+      border-color: #f59e0b !important;
+      box-shadow: 0 0 0 2px rgba(245,158,11,0.25),
+                  inset 0 0 0 1px rgba(245,158,11,0.15) !important;
+    }
+    .seat-cell.alert-high {
+      border-color: #ef4444 !important;
+      animation: alert-pulse 1.4s ease-in-out infinite;
+    }
+    @keyframes alert-pulse {
+      0%,100% { box-shadow: 0 0 0 2px rgba(239,68,68,0.25); }
+      50%      { box-shadow: 0 0 0 5px rgba(239,68,68,0.45); }
+    }
+    .seat-flag {
+      position: absolute; top: 4px; right: 4px;
+      font-size: 10px; font-family: 'JetBrains Mono', monospace;
+      font-weight: 600; padding: 1px 5px; border-radius: 3px;
+      letter-spacing: 0.06em; line-height: 1.4; pointer-events: none;
+    }
+    .seat-flag.moderate { background: rgba(245,158,11,0.2); color: #f59e0b; }
+    .seat-flag.high     { background: rgba(239,68,68,0.2);  color: #ef4444; }
+
+    /* ── Extended modal layout ───────────────────────────── */
+    .modal { width: min(800px, 95vw) !important; max-height: 90vh; overflow-y: auto; }
+    .modal-body-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 20px; margin-top: 12px;
+    }
+
+    /* Student search dropdown */
+    .student-search-wrap { position: relative; margin-bottom: 8px; }
+    .student-search-input {
+      width: 100%; background: var(--bg3,#1a1a24);
+      border: 1px solid var(--border,#26263a); border-radius: 6px;
+      color: #e4e4f0; font-family: 'JetBrains Mono', monospace;
+      font-size: 13px; padding: 8px 10px; outline: none; box-sizing: border-box;
+    }
+    .student-search-input:focus { border-color: #00d4ff; }
+    .student-dropdown {
+      position: absolute; top: 100%; left: 0; right: 0;
+      background: #13131a; border: 1px solid #26263a; border-radius: 6px;
+      max-height: 200px; overflow-y: auto; z-index: 300;
+      margin-top: 2px; display: none;
+    }
+    .student-dropdown.open { display: block; }
+    .student-option {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 9px 12px; cursor: pointer;
+      border-bottom: 1px solid #1a1a24; font-size: 12px;
+    }
+    .student-option:last-child { border-bottom: none; }
+    .student-option:hover { background: rgba(0,212,255,0.08); }
+    .student-option-name { color: #e4e4f0; font-weight: 600; }
+    .student-option-id   { color: #8899aa; font-family: 'JetBrains Mono',monospace; font-size: 11px; }
+
+    /* Selected / assigned student panels */
+    .selected-student-panel {
+      background: rgba(0,212,255,0.05);
+      border: 1px solid rgba(0,212,255,0.12);
+      border-radius: 8px; padding: 14px; margin-top: 4px;
+    }
+    .selected-student-name { font-size: 15px; font-weight: 700; color: #e4e4f0; margin-bottom: 4px; }
+    .selected-student-id   { font-family: 'JetBrains Mono',monospace; font-size: 12px; color: #00d4ff; }
+    .selected-student-meta { font-size: 11px; color: #8899aa; margin-top: 6px; line-height: 1.6; }
+
+    /* Camera feed box */
+    .modal-cam-section { display: flex; flex-direction: column; gap: 8px; }
+    .modal-cam-input-row { display: flex; gap: 6px; }
+    .modal-cam-input-row input {
+      flex: 1; background: #1a1a24; border: 1px solid #26263a;
+      border-radius: 6px; color: #e4e4f0;
+      font-family: 'JetBrains Mono',monospace; font-size: 13px;
+      padding: 7px 10px; text-transform: uppercase; letter-spacing: 0.06em;
+    }
+    .modal-video-box {
+      width: 100%; aspect-ratio: 4/3; background: #0d1117;
+      border-radius: 8px; overflow: hidden; position: relative;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .modal-video-placeholder {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 8px;
+      color: #445566; font-size: 11px;
+      font-family: 'JetBrains Mono',monospace; letter-spacing: 0.08em;
+    }
+    .modal-live-badge {
+      position: absolute; top: 8px; left: 8px;
+      background: rgba(34,197,94,0.15); border: 1px solid rgba(34,197,94,0.4);
+      color: #22c55e; font-size: 9px; font-family: 'JetBrains Mono',monospace;
+      font-weight: 600; padding: 2px 7px; border-radius: 3px;
+      letter-spacing: 0.10em; display: none;
+    }
+    .cam-id-hint-text { font-size: 10px; color: #445566; line-height: 1.5; }
+
+    /* DB status chip */
+    #db-chip    { display: none; }
+    #alert-chip { display: none; }
   </style>
-  
 </head>
 <body>
 
 <div class="ink-layout">
 
-  <!-- ── InkSentinel sidebar ───────────────────────────── -->
+  <!-- ── Sidebar ─────────────────────────────────────────── -->
   <aside class="ink-sidebar" id="ink-sidebar">
     <div class="ink-logo">
       <span class="ink-logo-icon">◈</span>
       <span class="ink-logo-text">PROCTOR</span>
     </div>
     <nav class="ink-nav">
-      <a href="/dashboard" title="Dashboard">
+      <a href="/dashboard">
         <span class="ink-nav-icon">⊞</span>
         <span class="ink-nav-label">Dashboard</span>
       </a>
-      <a href="/session" title="Session">
+      <a href="/session">
         <span class="ink-nav-icon">◎</span>
         <span class="ink-nav-label">Session</span>
       </a>
-        <a href="/allsessions" title="All Sessions">
+      <a href="/allsessions">
         <span class="ink-nav-icon">☰</span>
         <span class="ink-nav-label">All Sessions</span>
       </a>
-      <a href="/incidents" title="Incidents">
+      <a href="/incidents">
         <span class="ink-nav-icon">△</span>
         <span class="ink-nav-label">Incidents</span>
       </a>
-      <a href="/history" title="Signal History">
+      <a href="/history">
         <span class="ink-nav-icon">◷</span>
         <span class="ink-nav-label">Sig. History</span>
       </a>
-      <a href="/pen" class="active" title="Pen Control">
+      <a href="/pen" class="active">
         <span class="ink-nav-icon">✒</span>
         <span class="ink-nav-label">Pen Control</span>
       </a>
+      <a href="/students-list">
+        <span class="ink-nav-icon">☰</span>
+        <span class="ink-nav-label">Students</span>
+      </a>
     </nav>
     <div class="ink-sidebar-footer">
-      <button class="ink-logout-btn" onclick="inkLogout()">
+      <button class="ink-logout-btn" onclick="doLogout()">
         <span class="ink-nav-icon">⇤</span>
         <span class="ink-nav-label">Sign out</span>
       </button>
-      <button class="ink-toggle-btn" id="ink-toggle" onclick="inkToggle()" title="Collapse sidebar">
-        ◀
-      </button>
+      <button class="ink-toggle-btn" id="ink-toggle" onclick="toggleSidebar()">◀</button>
     </div>
   </aside>
 
-  <!-- ── Proctopen app content ─────────────────────────── -->
+  <!-- ── App content ─────────────────────────────────────── -->
   <div class="ink-pen-content">
 
-    <!-- PAGE 1 — Landing -->
+    <!-- PAGE 1 — Landing (unchanged from Shams's version) -->
     <div id="page-landing" class="page">
       <div class="landing-wrap">
         <div class="landing-head">
@@ -205,23 +251,36 @@
           <button class="mode-card" data-pick="ble">
             <span class="mode-icon">⬡</span>
             <span class="mode-title">Bluetooth</span>
-            <span class="mode-desc">Connect via Web Bluetooth. Wemos units connect to the ESP32 over WiFi automatically.</span>
+            <span class="mode-desc">Connect via Web Bluetooth. Chrome/Edge only.</span>
           </button>
           <button class="mode-card" data-pick="ap">
             <span class="mode-icon">◈</span>
             <span class="mode-title">WiFi — Access Point</span>
-            <span class="mode-desc">ESP32 hosts its own hotspot. Join <code>Proctopen</code> on this device to connect.</span>
+            <span class="mode-desc">ESP32 hosts its own hotspot. Join <code>Proctopen</code>.</span>
           </button>
           <button class="mode-card" data-pick="sta">
             <span class="mode-icon">◎</span>
             <span class="mode-title">WiFi — Station</span>
-            <span class="mode-desc">ESP32 joins your router. Connect this device to the same network.</span>
+            <span class="mode-desc">ESP32 joins your router. Same network required.</span>
+          </button>
+          <button class="mode-card" data-pick="usb"
+            style="border-color:rgba(0,212,255,0.4)">
+            <span class="mode-icon" style="color:#00d4ff">⬡</span>
+            <span class="mode-title" style="color:#00d4ff">USB Serial ★ Recommended</span>
+            <span class="mode-desc">Most reliable for demo. Chrome/Edge + USB cable required.</span>
+          </button>
+
+          <button class="mode-card" id="btn-mock"
+            style="border-color:rgba(124,111,255,0.4)">
+            <span class="mode-icon" style="color:#7c6fff">🧪</span>
+            <span class="mode-title" style="color:#7c6fff">Simulator Mode</span>
+            <span class="mode-desc">Test the UI without hardware. 4 mock units are auto-connected.</span>
           </button>
         </div>
       </div>
     </div>
 
-    <!-- PAGE 2 — Setup -->
+    <!-- PAGE 2 — Setup (unchanged from Shams's version) -->
     <div id="page-setup" class="page hidden">
       <div class="setup-wrap">
         <div class="setup-topbar">
@@ -229,42 +288,61 @@
           <span class="brand small">Proctopen</span>
           <button class="theme-pill" id="theme-btn-2">Toggle theme</button>
         </div>
-
         <div id="sec-ble" class="setup-sec hidden">
           <h1>Bluetooth</h1>
           <ol class="steps">
-            <li>Press the mode button on the ESP32 until the OLED shows <code>[Bluetooth]</code>.</li>
-            <li>The ESP32's <code>Proctopen</code> WiFi hotspot will still be running for the Wemos units — you do not need to do anything for that.</li>
-            <li>Click <strong>Scan &amp; Connect</strong> below. Your browser will show a Bluetooth device picker — select <strong>Proctopen</strong>.</li>
+            <li>Press mode button on ESP32 until OLED shows <code>[Bluetooth]</code>.</li>
+            <li>Click Scan &amp; Connect and select <strong>Proctopen</strong>.</li>
           </ol>
-          <div class="info-note">Web Bluetooth requires <strong>Chrome or Edge</strong>. It does not work on Firefox or Safari.</div>
           <button class="btn-primary wide" id="ble-btn">Scan &amp; Connect</button>
         </div>
-
         <div id="sec-ap" class="setup-sec hidden">
           <h1>WiFi — Access Point</h1>
           <ol class="steps">
-            <li>Press the mode button on the ESP32 until the OLED shows <code>[WiFi AP]</code>.</li>
-            <li>On this device, connect to the WiFi network named <code>Proctopen</code> with password <code>proctopen123</code>.</li>
-            <li>Once connected, click <strong>Connect</strong> below.</li>
+            <li>Press mode button until OLED shows <code>[WiFi AP]</code>.</li>
+            <li>Join WiFi <code>Proctopen</code> (password: <code>proctopen123</code>).</li>
           </ol>
-          <div class="info-note">The Wemos units will also connect to <code>Proctopen</code> automatically. No extra configuration needed.</div>
           <button class="btn-primary wide" id="ap-btn">Connect</button>
         </div>
-
         <div id="sec-sta" class="setup-sec hidden">
           <h1>WiFi — Station</h1>
           <ol class="steps">
-            <li>Press the mode button on the ESP32 until the OLED shows <code>[WiFi STA]</code>.</li>
-            <li>First time? The ESP32 opens a setup portal. Join <code>Proctopen-Setup</code> WiFi and visit <code>192.168.4.1</code> to enter your router credentials.</li>
-            <li>The ESP32 will reboot and join your router. Connect this device to the same router network.</li>
-            <li>The Wemos units will receive the router credentials automatically and switch networks on their own.</li>
-            <li>Click <strong>Connect</strong> below.</li>
+            <li>Press mode button until OLED shows <code>[WiFi STA]</code>.</li>
+            <li>Connect this device to the same router.</li>
           </ol>
-          <div class="info-note">The ESP32's <code>Proctopen</code> hotspot stays running even in STA mode. Wemos units always have a fallback connection path.</div>
           <button class="btn-primary wide" id="sta-btn">Connect</button>
         </div>
-
+        <div id="sec-usb" class="setup-sec hidden">
+          <h1>USB Serial</h1>
+          <ol class="steps">
+            <li>Press mode button until OLED shows <code>[USB Serial]</code>.</li>
+            <li>Connect ESP32 via USB cable.</li>
+            <li>Click Connect — pick ESP32 port from browser popup.</li>
+          </ol>
+          <div class="info-note">Requires <strong>Chrome or Edge</strong>. Firefox/Safari not supported.</div>
+          <button class="btn-primary wide" id="usb-btn">Connect</button>
+        </div>
+        <div id="sec-exam-config" class="setup-sec hidden">
+          <h2 class="setup-section-title">Exam configuration</h2>
+          <div class="exam-mode-toggle">
+            <span class="toggle-label">Roll Call</span>
+            <label class="toggle-switch">
+              <input type="checkbox" id="mode-toggle"/>
+              <span class="toggle-slider"></span>
+            </label>
+            <span class="toggle-label">Fixed Wemos</span>
+          </div>
+          <div class="grid-config">
+            <label class="field-label">Grid size</label>
+            <div class="grid-size-inputs">
+              <input id="grid-rows" type="number" min="1" max="20" value="3" title="Rows"/>
+              <span class="dur-sep">rows ×</span>
+              <input id="grid-cols" type="number" min="1" max="20" value="4" title="Columns"/>
+              <span class="dur-sep">cols</span>
+            </div>
+            <p class="field-hint">Row 1 is front of room.</p>
+          </div>
+        </div>
         <div class="status-row" id="setup-status-row">
           <span class="dot" id="setup-dot"></span>
           <span id="setup-status-text">Not connected</span>
@@ -272,14 +350,19 @@
       </div>
     </div>
 
-    <!-- PAGE 3 — Dashboard -->
+    <!-- PAGE 3 — Dashboard (unchanged from Shams's version) -->
     <div id="page-dash" class="page hidden">
-
       <header>
         <div class="header-left">
           <span class="brand small">Proctopen</span>
           <span class="chip" id="mode-chip">—</span>
           <span class="chip" id="sta-chip" style="display:none">STA ✓</span>
+          <span class="chip" id="exam-mode-chip">—</span>
+          <!-- These two chips are managed by penapp-ext.js -->
+          <span class="chip" id="db-chip" style="color:#22c55e">DB ✓</span>
+          <span class="chip" id="alert-chip">
+            ⚠ <span id="alert-count">0</span> alerts
+          </span>
         </div>
         <div class="header-right">
           <span class="dot connected" id="hdr-dot"></span>
@@ -289,8 +372,6 @@
       </header>
 
       <main>
-
-        <!-- Exam controls -->
         <section class="card">
           <h2 class="card-title">Exam</h2>
           <div class="duration-row">
@@ -309,44 +390,30 @@
           </div>
           <div class="big-timer" id="big-timer">--:--</div>
           <div class="exam-btns">
-            <button class="btn-green"  id="start-btn">▶ Start</button>
-            <button class="btn-amber"  id="pause-btn">⏸ Pause</button>
-            <button class="btn-red"    id="end-btn">⏹ End</button>
-            <button class="btn-ghost"  id="reset-btn">↺ Reset</button>
+            <button class="btn-green" id="start-btn">▶ Start</button>
+            <button class="btn-amber" id="pause-btn">⏸ Pause</button>
+            <button class="btn-red"   id="end-btn">⏹ End</button>
+            <button class="btn-ghost" id="reset-btn">↺ Reset</button>
           </div>
         </section>
 
-        <!-- Connected units -->
-        <section class="card">
-          <h2 class="card-title">
-            Connected units
-            <span class="chip" id="unit-count">0</span>
-          </h2>
-          <div id="units-list">
-            <p class="empty-note">No units connected yet.</p>
-          </div>
-        </section>
-
-        <!-- Session history panel -->
-        <section class="card">
+        <section class="card" id="grid-section">
           <div class="card-titlebar">
-            <h2 class="card-title">Session History</h2>
-            <button class="btn-ghost small" id="clear-hist-btn">Clear Session</button>
+            <h2 class="card-title">
+              Seat grid <span class="chip" id="unit-count">0</span>
+            </h2>
+            <div class="grid-header-right">
+              <span class="field-hint" id="grid-hint">Drag unassigned units into seats</span>
+            </div>
           </div>
-          <p class="field-hint">Commands sent via this pen app this session, newest first.</p>
-          <div id="history-list" style="max-height:260px;overflow-y:auto;margin-top:0.5rem">
-            <p class="empty-note">No commands sent this session.</p>
+          <div id="unassigned-tray" class="unassigned-tray">
+            <span class="tray-label">Unassigned</span>
+            <div id="tray-units" class="tray-units"></div>
           </div>
-          <div style="margin-top:0.6rem">
-            <a href="/history"
-              style="font-size:0.72rem;color:var(--accent);text-decoration:none;
-                     font-family:var(--mono);letter-spacing:0.06em">
-              ◷ View full signal history →
-            </a>
-          </div>
+          <div class="proctor-row"><span>▲ Proctor / Front of room</span></div>
+          <div id="seat-grid" class="seat-grid"></div>
         </section>
 
-        <!-- Raw JSON -->
         <section class="card">
           <h2 class="card-title">Raw command</h2>
           <p class="field-hint">Send any JSON directly — for testing.</p>
@@ -356,7 +423,6 @@
           </div>
         </section>
 
-        <!-- Log -->
         <section class="card">
           <div class="card-titlebar">
             <h2 class="card-title">Log</h2>
@@ -364,27 +430,113 @@
           </div>
           <div id="log"></div>
         </section>
-
       </main>
-    </div><!-- end page-dash -->
+    </div>
 
-    <!-- Unit action modal -->
-    <div id="modal-bg" class="modal-bg hidden">
-      <div class="modal">
-        <div class="modal-head">
-          <h3 id="modal-title">Unit actions</h3>
-          <button class="icon-btn" id="modal-close">✕</button>
+  </div><!-- /ink-pen-content -->
+</div><!-- /ink-layout -->
+
+
+<!-- ════════════════════════════════════════════════════════
+     MODAL — extended with student search + camera feed.
+     The modal-head, action buttons, and close logic are
+     wired by app.js. penapp-ext.js adds extra behaviour
+     via MutationObserver — no app.js changes needed.
+════════════════════════════════════════════════════════ -->
+<div id="modal-bg" class="modal-bg hidden">
+  <div class="modal">
+
+    <div class="modal-head">
+      <div>
+        <h3 id="modal-title">Unit actions</h3>
+        <p id="modal-subtitle" class="modal-subtitle"></p>
+      </div>
+      <button class="icon-btn" id="modal-close">✕</button>
+    </div>
+
+    <!-- Roll call: student info (app.js shows/hides this).
+         modal-photo and modal-photo-placeholder MUST exist in DOM —
+         app.js accesses them unconditionally in openModal().
+         They are hidden here; the visible student info is in the
+         two-column layout below, managed by penapp-ext.js. -->
+    <div id="modal-student-info" class="modal-student-info hidden">
+      <!-- Required ghost elements — app.js crashes without these -->
+      <img id="modal-photo" src="" alt="" class="student-photo hidden"
+        style="display:none"/>
+      <span id="modal-photo-placeholder" class="photo-placeholder hidden"
+        style="display:none"></span>
+      <div class="student-fields">
+        <div class="student-field">
+          <label class="field-label">Name</label>
+          <input id="modal-name" type="text" placeholder="Student name"/>
         </div>
+        <div class="student-field">
+          <label class="field-label">ID</label>
+          <input id="modal-student-id" type="text" placeholder="Student ID"/>
+        </div>
+        <button class="btn-secondary small" id="modal-save-student">Save</button>
+      </div>
+    </div>
+
+    <!-- Fixed mode: read-only (app.js shows/hides this) -->
+    <div id="modal-fixed-info" class="modal-student-info hidden">
+      <div class="student-photo-wrap">
+        <img id="modal-fixed-photo" src="" alt="" class="student-photo"/>
+      </div>
+      <div class="student-fields">
+        <p class="fixed-name" id="modal-fixed-name">—</p>
+        <p class="fixed-id"   id="modal-fixed-id">—</p>
+      </div>
+    </div>
+
+    <!-- ── Extended two-column layout (penapp-ext.js manages) -->
+    <div class="modal-body-grid">
+
+      <!-- Left: DB student search + unit actions -->
+      <div>
+        <p class="field-label" style="margin-bottom:8px">Search students</p>
+
+        <div class="student-search-wrap">
+          <input class="student-search-input" id="student-search"
+            type="text" placeholder="Type name or ID..." autocomplete="off"/>
+          <div class="student-dropdown" id="student-dropdown"></div>
+        </div>
+
+        <!-- After searching: selected student to confirm -->
+        <div class="selected-student-panel" id="selected-panel" style="display:none">
+          <div class="selected-student-name" id="sel-name">—</div>
+          <div class="selected-student-id"   id="sel-id">—</div>
+          <div class="selected-student-meta" id="sel-meta">—</div>
+          <div style="display:flex;gap:6px;margin-top:10px">
+            <button class="btn-secondary small" id="assign-student-btn">✓ Assign</button>
+            <button class="btn-ghost small"     id="clear-student-btn">✕ Clear</button>
+          </div>
+        </div>
+
+        <!-- Already assigned student -->
+        <div id="assigned-student-panel" style="display:none;margin-top:6px">
+          <div class="selected-student-panel">
+            <div class="selected-student-name" id="assigned-name">—</div>
+            <div class="selected-student-id"   id="assigned-id">—</div>
+            <button class="btn-ghost small" id="remove-student-btn"
+              style="margin-top:8px">✕ Remove student</button>
+          </div>
+        </div>
+
+        <!-- Divider -->
+        <hr style="border:none;border-top:1px solid #26263a;margin:14px 0"/>
+
+        <!-- Unit action buttons (wired by app.js, logged by penapp-ext.js) -->
         <div class="modal-body">
           <div class="modal-row">
             <div class="modal-row-label">
-              <strong>Warn</strong><span>Flashes LED for 2 minutes</span>
+              <strong>Warn</strong><span>Shows WARNING on unit</span>
             </div>
             <button class="btn-amber" id="m-warn-btn">⚠ Warn</button>
           </div>
           <div class="modal-row">
             <div class="modal-row-label">
-              <strong>Disable</strong><span>0 seconds = indefinite</span>
+              <strong>Disable</strong><span>0 s = indefinite</span>
             </div>
             <div class="modal-row-right">
               <input id="m-punish" type="number" min="0" placeholder="Penalty (s)"/>
@@ -393,54 +545,68 @@
           </div>
           <div class="modal-row">
             <div class="modal-row-label">
-              <strong>Enable</strong><span>Re-enable pen immediately</span>
+              <strong>Enable</strong><span>Re-enable immediately</span>
             </div>
             <button class="btn-green" id="m-enable-btn">✓ Enable</button>
           </div>
           <div class="modal-row">
             <div class="modal-row-label">
-              <strong>Deduct time</strong><span>Reduces this unit's timer</span>
+              <strong>Deduct time</strong><span>Reduces unit timer</span>
             </div>
             <div class="modal-row-right">
               <input id="m-deduct" type="number" min="1" placeholder="Seconds"/>
               <button class="btn-red" id="m-deduct-btn">Deduct</button>
             </div>
           </div>
+          <div class="modal-row">
+            <div class="modal-row-label">
+              <strong>Beep</strong><span>Flash BEEP to identify unit</span>
+            </div>
+            <button class="btn-secondary" id="m-beep-btn">📣 Beep</button>
+          </div>
         </div>
       </div>
-    </div>
 
-  </div><!-- end .ink-pen-content -->
-</div><!-- end .ink-layout -->
+      <!-- Right: live camera feed -->
+      <div class="modal-cam-section">
+        <p class="field-label" style="margin-bottom:8px">Live camera feed</p>
 
+        <div class="modal-cam-input-row">
+          <input id="modal-cam-id" type="text"
+            placeholder="Cam ID — e.g. CAM-A1B2"/>
+          <button class="btn-secondary" id="modal-link-cam-btn"
+            style="font-size:12px;white-space:nowrap">Link</button>
+        </div>
+        <p class="cam-id-hint-text">
+          The camera page shows an 8-char ID. Enter it here to link
+          this seat's live feed.
+        </p>
+
+        <div class="modal-video-box" id="modal-video-box">
+          <div class="modal-video-placeholder" id="modal-video-placeholder">
+            <span style="font-size:28px;opacity:0.3">◈</span>
+            <span>No camera linked</span>
+          </div>
+          <img id="modal-live-img" src="" alt=""
+            style="display:none;width:100%;height:100%;object-fit:cover"/>
+          <div class="modal-live-badge" id="modal-live-badge">● LIVE</div>
+        </div>
+
+        <div id="modal-cam-status"
+          style="font-size:11px;font-family:'JetBrains Mono',monospace;
+                 color:#445566;margin-top:4px">
+        </div>
+      </div>
+
+    </div><!-- /modal-body-grid -->
+  </div>
+</div>
+
+<!-- app.js (v5) loads first — NEVER modify app.js directly.
+     penapp-ext.js attaches all extra behaviour via observers. -->
 <script src="/penapp/app.js"></script>
-<script>
-  // ── InkSentinel sidebar helpers ───────────────────────────
+<script type="module" src="/penapp/penapp-ext.js"></script>
+<!-- simscript.js is no longer needed — use Simulator Mode button instead -->
 
-  async function inkLogout() {
-    await fetch('/api/auth/logout', { method: 'POST' });
-    window.location.href = '/login';
-  }
-
-  function inkToggle() {
-    const sidebar = document.getElementById('ink-sidebar');
-    const btn     = document.getElementById('ink-toggle');
-    const collapsed = sidebar.classList.toggle('collapsed');
-    btn.textContent = collapsed ? '▶' : '◀';
-    btn.title       = collapsed ? 'Expand sidebar' : 'Collapse sidebar';
-    localStorage.setItem('ink-sidebar-collapsed', collapsed ? '1' : '0');
-  }
-
-  // restore saved collapse state on load
-  (function() {
-    if (localStorage.getItem('ink-sidebar-collapsed') !== '1') return;
-    const sidebar = document.getElementById('ink-sidebar');
-    const btn     = document.getElementById('ink-toggle');
-    if (!sidebar || !btn) return;
-    sidebar.classList.add('collapsed');
-    btn.textContent = '▶';
-    btn.title       = 'Expand sidebar';
-  })();
-</script>
 </body>
 </html>

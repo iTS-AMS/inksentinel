@@ -24,10 +24,10 @@ from ultralytics import YOLO
 from pydantic import BaseModel
 
 # ── Config ─────────────────────────────────────────────────────────────────────
-MODEL_PATH          = os.getenv("YOLO_MODEL_PATH", "best.pt")
+MODEL_PATH           = os.getenv("YOLO_MODEL_PATH", "best.pt")
 CONFIDENCE_THRESHOLD = float(os.getenv("YOLO_CONF_THRESHOLD", "0.30"))
-HOST                = os.getenv("HOST", "0.0.0.0")
-PORT                = int(os.getenv("PORT", "8000"))
+HOST                 = os.getenv("HOST", "0.0.0.0")
+PORT                 = int(os.getenv("YOLO_PORT", "9999"))   # FIX 3: was PORT=8000, conflicts with Node
 
 CHEATING_CLASSES = {"phone", "cheatsheet", "looking_away", "cheating"}
 
@@ -58,26 +58,12 @@ app = FastAPI(title="InkSentinel YOLO API", lifespan=lifespan)
 
 
 # ── Response schema ────────────────────────────────────────────────────────────
-class DetectionItem(BaseModel):
-    class_: str
-    confidence: float
-
-    class Config:
-        # Rename `class_` → `class` in JSON output (class is a reserved word in Python)
-        fields = {"class_": "class"}
-
-
-class InferResponse(BaseModel):
-    detections: list
-    detection_count: int
-    annotated_image: str | None   # base64-encoded JPEG, or null if no detections
-
 
 # ── Routes ─────────────────────────────────────────────────────────────────────
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "model": MODEL_PATH}
+    return {"status": "ok", "model": MODEL_PATH, "classes": _model.names if _model else {}}
 
 
 @app.post("/infer")

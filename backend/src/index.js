@@ -16,6 +16,7 @@ import signalRoutes   from './routes/signals.js';
 import penlogRoutes   from './routes/penlog.js';
 import historyRoutes  from './routes/history.js';
 import sessionRoutes  from './routes/sessions.js';
+import studentRoutes  from './routes/students.js';   // ← new
 import pageRouter     from './pages/router.js';
 import { setupWebSocket } from './wsHandler.js';
  
@@ -38,6 +39,8 @@ app.use('/api/signal',     signalRoutes);
 app.use('/api/penlog',     penlogRoutes);
 app.use('/api/history',    historyRoutes);
 app.use('/api/sessions',   sessionRoutes);
+app.use('/api/students',   studentRoutes);            // ← new
+
  
 // app.get('/', (req, res) => {
 //   res.send('Server is running');
