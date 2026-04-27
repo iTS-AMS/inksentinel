@@ -1,0 +1,144 @@
+<aside
+  class="w-64 bg-surface-light dark:bg-surface-dark border-r border-border-light dark:border-border-dark flex flex-col justify-between h-full flex-shrink-0 transition-colors duration-200"
+>
+  <div>
+    <div class="p-6 flex items-center gap-3">
+      <div
+        class="bg-primary rounded-lg p-1.5 flex items-center justify-center shadow-sm"
+      >
+        <span class="material-symbols-outlined text-white text-2xl"
+          >grid_view</span
+        >
+      </div>
+      <div>
+        <h1
+          class="font-bold text-lg leading-tight text-gray-900 dark:text-white"
+        >
+          ExamNexus
+        </h1>
+        <p
+          class="text-[10px] uppercase font-bold tracking-wider text-gray-500 dark:text-gray-400 mt-0.5"
+        >
+          Proctor Console
+        </p>
+      </div>
+    </div>
+
+    <nav class="px-4 py-2 space-y-1">
+      <a
+        class="nav-link flex items-center gap-3 px-4 py-3 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white font-medium rounded-xl group transition-colors"
+        href="dashboard"
+      >
+        <span
+          class="material-icons-outlined text-xl text-gray-400 group-hover:text-primary transition-colors"
+          >grid_view</span
+        >
+        Dashboard
+      </a>
+
+      <a
+        class="nav-link flex items-center gap-3 px-4 py-3 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white font-medium rounded-xl group transition-colors"
+        href="exam-setup"
+      >
+        <span
+          class="material-icons-outlined text-xl text-gray-400 group-hover:text-primary transition-colors"
+          >settings_suggest</span
+        >
+        Exam Setup
+      </a>
+
+      <a class="nav-link flex items-center gap-3 px-4 py-3 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white font-medium rounded-xl group transition-colors" 
+      href="/allsession">
+        <span class="material-icons-outlined text-xl text-gray-400 group-hover:text-primary transition-colors">list_alt</span>
+        All Sessions
+      </a>
+
+      <a
+        class="nav-link flex items-center gap-3 px-4 py-3 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white font-medium rounded-xl group transition-colors"
+        href="student-list"
+      >
+        <span
+          class="material-icons-outlined text-xl text-gray-400 group-hover:text-primary transition-colors"
+          >people_alt</span
+        >
+        Student List
+      </a>
+
+<a
+  class="nav-link flex items-center gap-3 px-4 py-3 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white font-medium rounded-xl group transition-colors"
+  href="camera"
+  target="_blank"
+  rel="noopener noreferrer"
+>
+  <span class="material-icons-outlined text-xl text-gray-400 group-hover:text-primary transition-colors">
+    fact_check
+  </span>
+  Camera
+</a>
+      <div class="pt-4 mt-4 border-t border-gray-100 dark:border-gray-800">
+        <a
+          class="nav-link flex items-center gap-3 px-4 py-3 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white font-medium rounded-xl group transition-colors"
+          href="settings"
+        >
+          <span
+            class="material-icons-outlined text-xl text-gray-400 group-hover:text-primary transition-colors"
+            >settings</span
+          >
+          Settings
+        </a>
+      </div>
+    </nav>
+  </div>
+
+  <div
+    class="p-4 mb-4 mx-4 border border-gray-100 dark:border-gray-800 rounded-xl bg-gray-50/50 dark:bg-gray-800/50 flex items-center justify-between"
+  >
+    <div class="flex items-center gap-3 overflow-hidden">
+      <div
+        class="bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 w-10 h-10 rounded-full flex items-center justify-center shrink-0"
+      >
+        <span class="material-icons-outlined">account_circle</span>
+      </div>
+      <div class="overflow-hidden">
+        <p class="text-sm font-bold text-gray-900 dark:text-white truncate" id="sb-username">
+          —
+        </p>
+        <p class="text-xs text-gray-500 dark:text-gray-400 truncate" id="sb-role">
+          Proctor
+        </p>
+      </div>
+    </div>
+    <button
+      onclick="sidebarLogout()"
+      title="Logout"
+      class="text-gray-400 hover:text-danger dark:hover:text-danger transition-colors p-1 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 shrink-0"
+    >
+      <span class="material-icons-outlined">logout</span>
+    </button>
+  </div>
+</aside>
+<script>
+  window.sidebarLogout = async function sidebarLogout() {
+    try {
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include',
+      });
+    } catch (_) {}
+    window.location.href = '/login';
+  };
+
+  // Load user info from JWT via /api/auth/me
+  ;(async () => {
+    try {
+      const res = await fetch('/api/auth/me', { credentials: 'include' });
+      if (!res.ok) return;
+      const data = await res.json();
+      const user = data.user || data;
+      const nameEl = document.getElementById('sb-username');
+      const roleEl = document.getElementById('sb-role');
+      if (nameEl && user.username) nameEl.textContent = user.username;
+      if (roleEl && user.role)     roleEl.textContent = user.role;
+    } catch (_) {}
+  })();
+</script>

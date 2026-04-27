@@ -1,0 +1,489 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Student List | ExamNexus</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+      rel="stylesheet"
+    />
+
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#FF5722",
+              secondary: "#10B981",
+              danger: "#EF4444",
+              warning: "#F59E0B",
+              "background-light": "#F9FAFB",
+              "background-dark": "#111827",
+              "surface-light": "#FFFFFF",
+              "surface-dark": "#1F2937",
+              "text-light": "#1F2937",
+              "text-dark": "#F3F4F6",
+              "border-light": "#E5E7EB",
+              "border-dark": "#374151",
+            },
+            fontFamily: {
+              sans: ["Inter", "sans-serif"],
+            },
+            borderRadius: {
+              DEFAULT: "0.5rem",
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      ::-webkit-scrollbar {
+        width: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 3px;
+      }
+      .dark ::-webkit-scrollbar-thumb {
+        background: #475569;
+      }
+    </style>
+  </head>
+  <body
+    class="bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark font-sans antialiased h-screen overflow-hidden flex transition-colors duration-200 relative"
+  >
+    <div id="sidebar-placeholder"></div>
+
+    <main class="flex-1 flex flex-col h-full overflow-hidden relative">
+      <header
+        class="bg-surface-light dark:bg-surface-dark border-b border-border-light dark:border-border-dark h-20 px-8 flex items-center justify-between z-10 shrink-0"
+      >
+        <div>
+          <h2 class="text-xl font-bold text-gray-900 dark:text-white">
+            Student List
+          </h2>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+            Manage and monitor all enrolled students
+          </p>
+        </div>
+        <div class="flex items-center gap-3">
+          <button
+            onclick="alert('Import CSV feature will open a file dialog.')"
+            class="bg-white dark:bg-gray-800 border border-border-light dark:border-border-dark hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 text-sm font-medium py-2 px-4 rounded-lg transition-colors flex items-center gap-2"
+          >
+            <span class="material-symbols-outlined text-sm">upload_file</span>
+            Import CSV
+          </button>
+          <button
+            onclick="alert('Exporting student list to CSV...')"
+            class="bg-primary hover:bg-orange-600 text-white text-sm font-bold py-2 px-4 rounded-lg transition-colors flex items-center gap-2 shadow-sm"
+          >
+            <span class="material-symbols-outlined text-sm">download</span>
+            Export CSV
+          </button>
+        </div>
+      </header>
+
+      <div class="flex-1 overflow-y-auto p-8">
+        <div class="max-w-6xl mx-auto">
+          <div
+            class="bg-surface-light dark:bg-surface-dark rounded-xl shadow-sm border border-border-light dark:border-border-dark overflow-hidden"
+          >
+            <div class="overflow-x-auto">
+              <table class="w-full text-left border-collapse">
+                <thead>
+                  <tr
+                    class="bg-gray-50 dark:bg-gray-800/50 border-b border-border-light dark:border-border-dark"
+                  >
+                    <th
+                      class="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                    >
+                      Student Name
+                    </th>
+                    <th
+                      class="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                    >
+                      Student ID
+                    </th>
+                    <th
+                      class="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                    >
+                      Assigned Exam
+                    </th>
+                    <th
+                      class="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                    >
+                      Current Status
+                    </th>
+                    <th
+                      class="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-center"
+                    >
+                      Device Pairing
+                    </th>
+                  </tr>
+                </thead>
+                <tbody
+                  class="divide-y divide-border-light dark:border-border-dark"
+                >
+                  <tr
+                    class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                  >
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <div class="flex items-center gap-3">
+                        <div
+                          class="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center"
+                        >
+                          <span class="material-symbols-outlined text-sm"
+                            >person</span
+                          >
+                        </div>
+                        <span
+                          class="text-sm font-bold text-gray-900 dark:text-white"
+                          >Mahee</span
+                        >
+                      </div>
+                    </td>
+                    <td
+                      class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-600 dark:text-gray-300"
+                    >
+                      STU-2024-001
+                    </td>
+                    <td
+                      class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-600 dark:text-gray-300"
+                    >
+                      CSE173
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <div class="flex items-center gap-2">
+                        <span
+                          class="w-2 h-2 rounded-full bg-green-500 animate-pulse"
+                        ></span>
+                        <span
+                          class="text-sm font-bold text-gray-700 dark:text-gray-300"
+                          >In Exam</span
+                        >
+                      </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-center">
+                      <div
+                        class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400"
+                        title="Connected"
+                      >
+                        <span class="material-symbols-outlined text-lg"
+                          >link</span
+                        >
+                      </div>
+                    </td>
+                  </tr>
+
+                  <tr
+                    class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                  >
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <div class="flex items-center gap-3">
+                        <div
+                          class="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 flex items-center justify-center"
+                        >
+                          <span class="material-symbols-outlined text-sm"
+                            >person</span
+                          >
+                        </div>
+                        <span
+                          class="text-sm font-bold text-gray-900 dark:text-white"
+                          >Aalok</span
+                        >
+                      </div>
+                    </td>
+                    <td
+                      class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-600 dark:text-gray-300"
+                    >
+                      STU-2024-045
+                    </td>
+                    <td
+                      class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-600 dark:text-gray-300"
+                    >
+                      CSE173
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <div class="flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-warning"></span>
+                        <span
+                          class="text-sm font-bold text-gray-700 dark:text-gray-300"
+                          >Paused</span
+                        >
+                      </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-center">
+                      <div
+                        class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400"
+                        title="Connected"
+                      >
+                        <span class="material-symbols-outlined text-lg"
+                          >link</span
+                        >
+                      </div>
+                    </td>
+                  </tr>
+
+                  <tr
+                    class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                  >
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <div class="flex items-center gap-3">
+                        <div
+                          class="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 flex items-center justify-center"
+                        >
+                          <span class="material-symbols-outlined text-sm"
+                            >person</span
+                          >
+                        </div>
+                        <span
+                          class="text-sm font-bold text-gray-900 dark:text-white"
+                          >Fahim</span
+                        >
+                      </div>
+                    </td>
+                    <td
+                      class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-600 dark:text-gray-300"
+                    >
+                      STU-2024-112
+                    </td>
+                    <td
+                      class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-600 dark:text-gray-300"
+                    >
+                      CSE173
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <div class="flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-gray-400"></span>
+                        <span
+                          class="text-sm font-bold text-gray-700 dark:text-gray-300"
+                          >Not Started</span
+                        >
+                      </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-center">
+                      <div
+                        class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400"
+                        title="Connected"
+                      >
+                        <span class="material-symbols-outlined text-lg"
+                          >link</span
+                        >
+                      </div>
+                    </td>
+                  </tr>
+
+                  <tr
+                    class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                  >
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <div class="flex items-center gap-3">
+                        <div
+                          class="w-8 h-8 rounded-full bg-pink-100 dark:bg-pink-900/30 text-pink-600 dark:text-pink-400 flex items-center justify-center"
+                        >
+                          <span class="material-symbols-outlined text-sm"
+                            >person</span
+                          >
+                        </div>
+                        <span
+                          class="text-sm font-bold text-gray-900 dark:text-white"
+                          >Abidur</span
+                        >
+                      </div>
+                    </td>
+                    <td
+                      class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-600 dark:text-gray-300"
+                    >
+                      STU-2024-089
+                    </td>
+                    <td
+                      class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-600 dark:text-gray-300"
+                    >
+                      CSE173
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <div class="flex items-center gap-2">
+                        <span
+                          class="w-2 h-2 rounded-full bg-green-500 animate-pulse"
+                        ></span>
+                        <span
+                          class="text-sm font-bold text-gray-700 dark:text-gray-300"
+                          >In Exam</span
+                        >
+                      </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-center">
+                      <div
+                        class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400"
+                        title="Connected"
+                      >
+                        <span class="material-symbols-outlined text-lg"
+                          >link</span
+                        >
+                      </div>
+                    </td>
+                  </tr>
+
+                  <tr
+                    class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                  >
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <div class="flex items-center gap-3">
+                        <div
+                          class="w-8 h-8 rounded-full bg-teal-100 dark:bg-teal-900/30 text-teal-600 dark:text-teal-400 flex items-center justify-center"
+                        >
+                          <span class="material-symbols-outlined text-sm"
+                            >person</span
+                          >
+                        </div>
+                        <span
+                          class="text-sm font-bold text-gray-900 dark:text-white"
+                          >Sami</span
+                        >
+                      </div>
+                    </td>
+                    <td
+                      class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-600 dark:text-gray-300"
+                    >
+                      STU-2024-156
+                    </td>
+                    <td
+                      class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-600 dark:text-gray-300"
+                    >
+                      CSE173
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <div class="flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-danger"></span>
+                        <span
+                          class="text-sm font-bold text-gray-700 dark:text-gray-300"
+                          >Flagged</span
+                        >
+                      </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-center">
+                      <div
+                        class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400"
+                        title="Connected"
+                      >
+                        <span class="material-symbols-outlined text-lg"
+                          >link</span
+                        >
+                      </div>
+                    </td>
+                  </tr>
+
+                  <tr
+                    class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                  >
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <div class="flex items-center gap-3">
+                        <div
+                          class="w-8 h-8 rounded-full bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 flex items-center justify-center"
+                        >
+                          <span class="material-symbols-outlined text-sm"
+                            >person</span
+                          >
+                        </div>
+                        <span
+                          class="text-sm font-bold text-gray-900 dark:text-white"
+                          >Obayed</span
+                        >
+                      </div>
+                    </td>
+                    <td
+                      class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-600 dark:text-gray-300"
+                    >
+                      STU-2024-210
+                    </td>
+                    <td
+                      class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-600 dark:text-gray-300"
+                    >
+                      CSE173
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <div class="flex items-center gap-2">
+                        <span
+                          class="w-2 h-2 rounded-full bg-green-500 animate-pulse"
+                        ></span>
+                        <span
+                          class="text-sm font-bold text-gray-700 dark:text-gray-300"
+                          >In Exam</span
+                        >
+                      </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-center">
+                      <div
+                        class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400"
+                        title="Connected"
+                      >
+                        <span class="material-symbols-outlined text-lg"
+                          >link</span
+                        >
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div
+              class="bg-white dark:bg-surface-dark px-6 py-4 border-t border-border-light dark:border-border-dark flex items-center justify-between"
+            >
+              <p class="text-sm text-gray-500 dark:text-gray-400">
+                Showing
+                <span class="font-bold text-gray-700 dark:text-gray-200"
+                  >1</span
+                >
+                to
+                <span class="font-bold text-gray-700 dark:text-gray-200"
+                  >6</span
+                >
+                of
+                <span class="font-bold text-gray-700 dark:text-gray-200"
+                  >24</span
+                >
+                results
+              </p>
+              <div class="flex items-center gap-2">
+                <button
+                  class="p-2 rounded-lg border border-border-light dark:border-border-dark text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50 transition-colors"
+                  disabled
+                >
+                  <span class="material-symbols-outlined text-base"
+                    >chevron_left</span
+                  >
+                </button>
+                <button
+                  onclick="alert('Loading next page...')"
+                  class="p-2 rounded-lg border border-border-light dark:border-border-dark text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                >
+                  <span class="material-symbols-outlined text-base"
+                    >chevron_right</span
+                  >
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <script src="../scripts/component-loader.js"></script>
+  </body>
+</html>

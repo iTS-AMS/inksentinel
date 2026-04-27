@@ -1,0 +1,628 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+  <title>Camera | ExamNexus</title>
+
+  <!-- Theme runs before Tailwind / first paint — no flash -->
+  <script src="../scripts/theme-controller.js"></script>
+
+  <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            primary:            '#FF5722',
+            secondary:          '#10B981',
+            danger:             '#EF4444',
+            warning:            '#F59E0B',
+            'background-light': '#F9FAFB',
+            'background-dark':  '#111827',
+            'surface-light':    '#FFFFFF',
+            'surface-dark':     '#1F2937',
+            'text-light':       '#1F2937',
+            'text-dark':        '#F3F4F6',
+            'border-light':     '#E5E7EB',
+            'border-dark':      '#374151',
+            'subtext-light':    '#64748B',
+            'subtext-dark':     '#94A3B8',
+          },
+          fontFamily: { sans: ['Inter', 'sans-serif'] },
+        },
+      },
+    };
+  </script>
+
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 3px; }
+    .dark ::-webkit-scrollbar-thumb { background: #475569; }
+
+    /* Live indicator pulse */
+    @keyframes live-pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5); }
+      50%       { box-shadow: 0 0 0 5px rgba(16, 185, 129, 0);  }
+    }
+    .live-dot { animation: live-pulse 1.8s infinite; }
+
+    /* Camera ID monospace display */
+    .cam-id-mono {
+      font-family: 'SF Mono', 'Fira Code', 'Fira Mono', 'Roboto Mono', monospace;
+      letter-spacing: 0.18em;
+    }
+  </style>
+</head>
+
+<body class="bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark antialiased h-screen flex overflow-hidden transition-colors duration-200">
+
+  <!-- Sidebar injected by component-loader.js -->
+  <aside id="sidebar-placeholder"
+    class="w-64 flex-shrink-0 bg-surface-light dark:bg-surface-dark border-r border-border-light dark:border-border-dark h-full">
+  </aside>
+
+  <!-- Main -->
+  <main class="flex-1 flex flex-col h-full overflow-hidden">
+
+    <!-- Page header -->
+    <header class="bg-background-light dark:bg-background-dark border-b border-border-light dark:border-border-dark px-8 py-5 flex items-center gap-4 shrink-0 transition-colors duration-200">
+      <div class="w-9 h-9 rounded-lg bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center flex-shrink-0">
+        <span class="material-icons-outlined text-primary text-xl">videocam</span>
+      </div>
+      <div>
+        <h1 class="text-xl font-bold">Camera</h1>
+        <p class="text-sm text-subtext-light dark:text-subtext-dark mt-0.5" id="cam-sub">
+          Set up your webcam feed
+        </p>
+      </div>
+    </header>
+
+    <!-- Two-column layout: left = camera controls, right = registered cameras table -->
+    <div class="flex-1 overflow-y-auto px-8 py-6">
+      <div class="w-full max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+
+        <!-- ══ LEFT COLUMN ══════════════════════════════════ -->
+        <div class="flex flex-col gap-4">
+
+          <!-- ── Step 1: Setup card ── -->
+          <div id="config-card"
+            class="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark p-6 shadow-sm">
+
+            <h2 class="text-sm font-bold text-text-light dark:text-text-dark mb-4 flex items-center gap-2">
+              <span class="material-icons-outlined text-base text-subtext-light dark:text-subtext-dark">settings</span>
+              Setup
+            </h2>
+
+            <!-- Camera device select -->
+            <div class="mb-4">
+              <label class="block text-xs font-semibold text-subtext-light dark:text-subtext-dark uppercase tracking-wide mb-1.5">
+                Camera device
+              </label>
+              <div class="relative">
+                <select id="device-select"
+                  class="w-full appearance-none bg-slate-50 dark:bg-slate-800 border border-border-light dark:border-border-dark rounded-lg px-4 py-2.5 text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-shadow">
+                  <option value="">Detecting cameras…</option>
+                </select>
+                <span class="material-icons-round absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none text-lg">expand_more</span>
+              </div>
+              <p class="mt-1 text-xs text-subtext-light dark:text-subtext-dark">
+                Camera names appear after you click Start and grant permission.
+              </p>
+            </div>
+
+            <!-- Seat label -->
+            <div class="mb-5">
+              <label class="block text-xs font-semibold text-subtext-light dark:text-subtext-dark uppercase tracking-wide mb-1.5">
+                Seat label
+              </label>
+              <input id="seat-label" type="text" placeholder="e.g. Seat 01" maxlength="30"
+                class="w-full bg-slate-50 dark:bg-slate-800 border border-border-light dark:border-border-dark rounded-lg px-4 py-2.5 text-sm text-text-light dark:text-text-dark placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-shadow" />
+            </div>
+
+            <button id="start-btn"
+              class="w-full bg-primary hover:bg-orange-600 text-white rounded-lg py-2.5 text-sm font-semibold flex items-center justify-center gap-2 transition-colors shadow-sm">
+              <span class="material-icons-round text-base">play_arrow</span>
+              Start Camera
+            </button>
+          </div>
+
+          <!-- ── Camera ID card (hidden until WS connects) ── -->
+          <div id="cam-id-card"
+            class="hidden bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-xl p-5">
+
+            <p class="text-xs font-bold text-primary uppercase tracking-widest mb-2">
+              Camera ID — share with proctor
+            </p>
+            <p id="cam-id-display"
+              class="cam-id-mono text-4xl font-bold text-primary leading-none mb-3">
+              —
+            </p>
+            <p class="text-xs text-subtext-light dark:text-subtext-dark leading-relaxed mb-3">
+              The proctor enters this ID into the seat card to link this camera to a specific seat.
+            </p>
+            <button id="copy-btn"
+              class="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg border border-orange-300 dark:border-orange-700 text-xs font-semibold text-primary hover:bg-orange-100 dark:hover:bg-orange-900/40 transition-colors">
+              <span class="material-icons-outlined text-sm">content_copy</span>
+              Copy ID
+            </button>
+          </div>
+
+          <!-- ── Video preview ── -->
+          <div id="video-wrap"
+            class="w-full bg-gray-900 dark:bg-black rounded-xl overflow-hidden relative"
+            style="aspect-ratio: 4/3">
+
+            <video id="video-preview"
+              autoplay muted playsinline
+              class="w-full h-full object-cover hidden"></video>
+
+            <!-- Placeholder shown when camera is off -->
+            <div id="video-placeholder"
+              class="absolute inset-0 flex flex-col items-center justify-center gap-2 text-gray-600 dark:text-gray-500">
+              <span class="material-icons-outlined text-5xl opacity-30">videocam_off</span>
+              <span class="text-xs">Camera not started</span>
+            </div>
+          </div>
+
+          <!-- ── Status + Stop card (hidden until connected) ── -->
+          <div id="status-card"
+            class="hidden bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark px-5 py-4 shadow-sm flex items-center justify-between">
+
+            <div class="flex items-center gap-3">
+              <span id="status-dot"
+                class="live-dot w-2.5 h-2.5 rounded-full bg-secondary inline-block flex-shrink-0"></span>
+              <div>
+                <p id="status-text" class="text-sm font-bold tracking-wide">LIVE</p>
+                <p id="fps-display" class="text-xs text-subtext-light dark:text-subtext-dark mt-0.5"></p>
+              </div>
+            </div>
+
+            <button id="stop-btn"
+              class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-danger text-xs font-semibold hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors">
+              <span class="material-icons-outlined text-sm">stop</span>
+              Stop
+            </button>
+          </div>
+
+        </div><!-- /left column -->
+
+        <!-- ══ RIGHT COLUMN — Registered Cameras table ═════ -->
+        <div>
+          <div id="feeds-card"
+            class="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm overflow-hidden">
+
+            <div class="flex items-center justify-between px-5 py-4 border-b border-border-light dark:border-border-dark">
+              <h2 class="text-sm font-bold flex items-center gap-2">
+                <span class="material-icons-outlined text-base text-subtext-light dark:text-subtext-dark">wifi_tethering</span>
+                Registered Cameras
+              </h2>
+              <button onclick="loadFeeds()"
+                class="inline-flex items-center gap-1 text-xs text-subtext-light dark:text-subtext-dark hover:text-primary transition-colors">
+                <span class="material-icons-outlined text-sm">refresh</span>
+                Refresh
+              </button>
+            </div>
+
+            <!-- Fixed-height scrollable table body -->
+            <div class="overflow-x-auto">
+              <table class="w-full text-sm">
+                <thead>
+                  <tr class="border-b border-border-light dark:border-border-dark">
+                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-subtext-light dark:text-subtext-dark">Status</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-subtext-light dark:text-subtext-dark">Label</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-subtext-light dark:text-subtext-dark">Camera ID</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-subtext-light dark:text-subtext-dark">Linked Seat</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-subtext-light dark:text-subtext-dark">Alerts</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-subtext-light dark:text-subtext-dark">Action</th>
+                  </tr>
+                </thead>
+              </table>
+              <!-- Scrollable tbody wrapper — max 420px, scrolls internally -->
+              <div style="max-height:420px;overflow-y:auto">
+                <table class="w-full text-sm">
+                  <tbody id="feeds-tbody">
+                    <tr>
+                      <td colspan="6" class="px-4 py-8 text-center text-xs text-subtext-light dark:text-subtext-dark">
+                        Loading cameras…
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+          </div>
+        </div><!-- /right column -->
+
+      </div>
+    </div>
+  </main>
+
+<!-- component-loader injects sidebar + highlights active nav -->
+<script src="../scripts/component-loader.js"></script>
+
+<script>
+  // ─────────────────────────────────────────────────────────
+  //  State
+  // ─────────────────────────────────────────────────────────
+  let stream    = null;   // MediaStream from getUserMedia
+  let ws        = null;   // WebSocket to backend
+  let canvas    = null;   // offscreen canvas for JPEG encoding
+  let sendTimer = null;   // setInterval handle for frame loop
+  let camId     = null;   // camera_id assigned by backend
+  const FPS     = 10;
+
+  // ─────────────────────────────────────────────────────────
+  //  Device enumeration — NO getUserMedia here.
+  //
+  //  Calling getUserMedia just to enumerate is the bug that
+  //  lights the camera LED on page load and leaks a stream
+  //  that can never be stopped.
+  //
+  //  Without a prior permission grant the browser returns
+  //  devices with empty labels — we show "Camera N" as a
+  //  fallback. Real labels appear after the user clicks Start
+  //  and grants permission; we re-enumerate at that point.
+  // ─────────────────────────────────────────────────────────
+  async function populateDevices(selectedDeviceId = null) {
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const sel     = document.getElementById('device-select');
+      const cams    = devices.filter(d => d.kind === 'videoinput');
+
+      if (!cams.length) {
+        sel.innerHTML = '<option value="">No cameras found</option>';
+        return;
+      }
+
+      const prevVal = selectedDeviceId || sel.value;
+      sel.innerHTML = '';
+      cams.forEach((d, i) => {
+        const opt   = document.createElement('option');
+        opt.value   = d.deviceId;
+        opt.text    = d.label || `Camera ${i + 1}`;
+        sel.appendChild(opt);
+      });
+
+      // Restore previously selected device if still available
+      if (prevVal) {
+        const match = [...sel.options].find(o => o.value === prevVal);
+        if (match) sel.value = prevVal;
+      }
+    } catch (err) {
+      console.warn('[Camera] enumerateDevices failed:', err.message);
+    }
+  }
+
+  // Enumerate on load — labels will be generic until permission granted
+  populateDevices();
+
+  // Re-enumerate when devices change (plug/unplug)
+  navigator.mediaDevices.addEventListener('devicechange', () => populateDevices());
+
+  // ─────────────────────────────────────────────────────────
+  //  Start button — this is the ONLY place getUserMedia runs
+  // ─────────────────────────────────────────────────────────
+  document.getElementById('start-btn').addEventListener('click', async () => {
+    const label    = document.getElementById('seat-label').value.trim();
+    const deviceId = document.getElementById('device-select').value;
+
+    if (!label) {
+      alert('Enter a seat label before starting.');
+      return;
+    }
+
+    // Update button to loading state
+    const startBtn = document.getElementById('start-btn');
+    startBtn.disabled   = true;
+    startBtn.innerHTML  = '<span class="material-icons-round text-base animate-spin">refresh</span> Starting…';
+
+    try {
+      // Open camera stream — this is when the permission prompt fires
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          deviceId: deviceId ? { exact: deviceId } : undefined,
+          width:  640,
+          height: 480,
+        },
+      });
+    } catch (err) {
+      startBtn.disabled  = false;
+      startBtn.innerHTML = '<span class="material-icons-round text-base">play_arrow</span> Start Camera';
+      alert(`Camera access denied: ${err.message}`);
+      return;
+    }
+
+    // Re-enumerate now that permission is granted — get real labels
+    const chosenId = stream.getVideoTracks()[0]?.getSettings()?.deviceId;
+    populateDevices(chosenId);
+
+    // Show video
+    const video         = document.getElementById('video-preview');
+    video.srcObject     = stream;
+    video.classList.remove('hidden');
+    document.getElementById('video-placeholder').style.display = 'none';
+
+    // Offscreen canvas for JPEG encoding
+    canvas        = document.createElement('canvas');
+    canvas.width  = 640;
+    canvas.height = 480;
+
+    // Connect WebSocket
+    const wsProto = window.location.protocol === 'https:' ? 'wss' : 'ws';
+    const wsUrl   = `${wsProto}://${window.location.host}/ws?role=feed&label=${encodeURIComponent(label)}`;
+    ws            = new WebSocket(wsUrl);
+    ws.binaryType = 'arraybuffer';
+
+    ws.onopen = () => {
+      document.getElementById('cam-sub').textContent   = `Connected — ${label}`;
+      document.getElementById('status-card').classList.remove('hidden');
+      document.getElementById('config-card').classList.add('hidden');
+
+      // Begin streaming frames
+      sendTimer = setInterval(sendFrame, 1000 / FPS);
+
+      // Fetch camera ID — backend assigns it on WS connect
+      setTimeout(fetchCamId, 800);
+    };
+
+    ws.onmessage = (e) => {
+      try {
+        const msg = JSON.parse(e.data);
+        if (msg.type === 'cam_id_assigned' && msg.camera_id) showCamId(msg.camera_id);
+      } catch (_) {}
+    };
+
+    ws.onclose = () => {
+      document.getElementById('cam-sub').textContent = 'Disconnected';
+      // Turn dot grey
+      const dot = document.getElementById('status-dot');
+      dot.classList.remove('bg-secondary', 'live-dot');
+      dot.classList.add('bg-gray-400');
+      document.getElementById('status-text').textContent = 'OFFLINE';
+      if (sendTimer) { clearInterval(sendTimer); sendTimer = null; }
+    };
+
+    ws.onerror = () => {
+      alert('WebSocket connection failed. Is the server running?');
+      _resetUI();
+    };
+  });
+
+  // ─────────────────────────────────────────────────────────
+  //  Frame sender
+  // ─────────────────────────────────────────────────────────
+  function sendFrame() {
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    const video = document.getElementById('video-preview');
+    if (video.readyState < 2) return; // not ready yet
+
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    canvas.toBlob(blob => {
+      if (!blob || ws?.readyState !== WebSocket.OPEN) return;
+      blob.arrayBuffer().then(buf => {
+        try { ws.send(buf); } catch (_) {}
+      });
+    }, 'image/jpeg', 0.75);
+  }
+
+  // ─────────────────────────────────────────────────────────
+  //  Camera ID
+  //  Backend assigns camera_id when the feed row is created.
+  //  We listen for cam_id_assigned over WS (primary) and poll
+  //  /api/feeds as a fallback in case the WS message was missed.
+  // ─────────────────────────────────────────────────────────
+  async function fetchCamId() {
+    if (camId) return; // already received via WS message
+    const label = document.getElementById('seat-label').value.trim();
+    try {
+      const res   = await fetch('/api/feeds', { credentials: 'include' });
+      if (!res.ok) return;
+      const feeds = await res.json();
+      const feed  = feeds.find(f => f.label === label && f.camera_id);
+      if (feed) {
+        showCamId(feed.camera_id);
+      } else {
+        // Retry once — DB write may be slightly behind
+        setTimeout(fetchCamId, 1500);
+      }
+    } catch (_) {}
+  }
+
+  function showCamId(id) {
+    camId = id;
+    document.getElementById('cam-id-card').classList.remove('hidden');
+    document.getElementById('cam-id-display').textContent = id;
+  }
+
+  // ─────────────────────────────────────────────────────────
+  //  Copy button
+  // ─────────────────────────────────────────────────────────
+  document.getElementById('copy-btn').addEventListener('click', () => {
+    if (!camId) return;
+    navigator.clipboard.writeText(camId).then(() => {
+      const btn = document.getElementById('copy-btn');
+      const prev = btn.innerHTML;
+      btn.innerHTML = '<span class="material-icons-outlined text-sm">check</span> Copied!';
+      btn.classList.add('bg-orange-100', 'dark:bg-orange-900/40');
+      setTimeout(() => {
+        btn.innerHTML = prev;
+        btn.classList.remove('bg-orange-100', 'dark:bg-orange-900/40');
+      }, 2000);
+    }).catch(() => {
+      // Fallback for browsers that block clipboard without HTTPS
+      prompt('Copy this camera ID:', camId);
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────
+  //  Stop button — tears down EVERYTHING
+  // ─────────────────────────────────────────────────────────
+  document.getElementById('stop-btn').addEventListener('click', () => {
+    _stopAll();
+    _resetUI();
+  });
+
+  function _stopAll() {
+    // 1. Stop frame loop first — no more sends
+    if (sendTimer) { clearInterval(sendTimer); sendTimer = null; }
+    // 2. Close WebSocket
+    if (ws) {
+      ws.onclose = null; // prevent onclose from firing UI resets twice
+      ws.onerror = null;
+      try { ws.close(); } catch (_) {}
+      ws = null;
+    }
+    // 3. Stop all camera tracks — this turns the LED off
+    if (stream) {
+      stream.getTracks().forEach(t => t.stop());
+      stream = null;
+    }
+    // 4. Detach stream from video element
+    const video = document.getElementById('video-preview');
+    video.srcObject = null;
+  }
+
+  function _resetUI() {
+    document.getElementById('video-preview').classList.add('hidden');
+    document.getElementById('video-placeholder').style.display = '';
+    document.getElementById('cam-id-card').classList.add('hidden');
+    document.getElementById('status-card').classList.add('hidden');
+    const dot = document.getElementById('status-dot');
+    dot.classList.remove('bg-gray-400');
+    dot.classList.add('bg-secondary', 'live-dot');
+    document.getElementById('status-text').textContent = 'LIVE';
+    document.getElementById('config-card').classList.remove('hidden');
+    const startBtn = document.getElementById('start-btn');
+    startBtn.disabled  = false;
+    startBtn.innerHTML = '<span class="material-icons-round text-base">play_arrow</span> Start Camera';
+    camId = null;
+    canvas = null;
+    document.getElementById('cam-sub').textContent = 'Set up your webcam feed';
+    // Refresh feeds table to show updated status
+    loadFeeds();
+  }
+
+  // ─────────────────────────────────────────────────────────
+  //  Feeds table — shows all registered cameras with status
+  // ─────────────────────────────────────────────────────────
+  async function loadFeeds() {
+    const tbody = document.getElementById('feeds-tbody');
+    if (!tbody) return;
+
+    try {
+      const res   = await fetch('/api/feeds', { credentials: 'include', cache: 'no-store' });
+      if (!res.ok) throw new Error(res.status);
+      const feeds = await res.json();
+
+      if (!feeds.length) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="6" class="px-4 py-8 text-center text-xs text-subtext-light dark:text-subtext-dark">
+              No cameras registered yet — start a camera above to register one.
+            </td>
+          </tr>`;
+        return;
+      }
+
+      tbody.innerHTML = feeds.map(f => {
+        // Use availability from API (joined with camera_links by feeds.js)
+        // availability: 'available' | 'linked' | 'disconnected'
+        const avail = f.availability ||
+          (f.connected ? 'available' : 'disconnected');
+
+        const dotCls =
+          avail === 'available'    ? 'bg-secondary live-dot' :
+          avail === 'linked'       ? 'bg-blue-500' :
+                                     'bg-gray-400 dark:bg-gray-600';
+
+        const statusBadge =
+          avail === 'available'
+            ? `<span class="flex items-center gap-2 text-xs font-medium text-secondary">
+                 <span class="w-2 h-2 rounded-full flex-shrink-0 ${dotCls}"></span>Available
+               </span>`
+          : avail === 'linked'
+            ? `<span class="flex items-center gap-2 text-xs font-medium text-blue-500 dark:text-blue-400">
+                 <span class="w-2 h-2 rounded-full flex-shrink-0 ${dotCls}"></span>Linked
+               </span>`
+            : `<span class="flex items-center gap-2 text-xs font-medium text-subtext-light dark:text-subtext-dark">
+                 <span class="w-2 h-2 rounded-full flex-shrink-0 ${dotCls}"></span>Disconnected
+               </span>`;
+
+        const alerts = Number(f.alert_count || 0);
+
+        // Linked seat cell — show which seat this camera is assigned to
+        const linkedSeatCell = f.linked_seat
+          ? `<span class="text-xs font-semibold text-blue-500 dark:text-blue-400">${escHtml(f.linked_seat)}</span>`
+          : `<span class="text-xs text-subtext-light dark:text-subtext-dark">—</span>`;
+
+        return `
+        <tr class="border-b border-border-light dark:border-border-dark last:border-0
+                   hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors">
+          <td class="px-4 py-3">${statusBadge}</td>
+          <td class="px-4 py-3 text-sm font-medium">${escHtml(f.label)}</td>
+          <td class="px-4 py-3">
+            ${f.camera_id
+              ? `<span class="cam-id-mono text-sm font-bold text-primary">${f.camera_id}</span>`
+              : '<span class="text-xs text-subtext-light dark:text-subtext-dark">—</span>'}
+          </td>
+          <td class="px-4 py-3">${linkedSeatCell}</td>
+          <td class="px-4 py-3 text-sm ${alerts > 0 ? 'text-warning font-semibold' : 'text-subtext-light dark:text-subtext-dark'}">
+            ${alerts}
+          </td>
+          <td class="px-4 py-3">
+            ${avail === 'disconnected'
+              ? `<button onclick="deleteCamera(${f.id})"
+                   class="inline-flex items-center gap-1 text-xs text-danger hover:text-red-700 transition-colors">
+                   <span class="material-icons-outlined text-sm">delete_outline</span>Remove
+                 </button>`
+              : `<span class="text-xs text-subtext-light dark:text-subtext-dark">—</span>`}
+          </td>
+        </tr>`;
+      }).join('');
+    } catch (err) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="6" class="px-4 py-6 text-center text-xs text-danger">
+            Failed to load cameras — is the server running?
+          </td>
+        </tr>`;
+    }
+  }
+
+  function escHtml(s) {
+    return String(s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  async function deleteCamera(id) {
+    if (!confirm('Remove this camera? It will need to reconnect to re-register.')) return;
+    try {
+      const res = await fetch(`/api/feeds/${id}`, {
+        method: 'DELETE', credentials: 'include'
+      });
+      const data = await res.json();
+      if (!res.ok) { alert(data.error || 'Remove failed'); return; }
+      loadFeeds();
+    } catch (_) {
+      alert('Network error — remove failed.');
+    }
+  }
+
+  // Load on page open, refresh every 10s
+  loadFeeds();
+  setInterval(loadFeeds, 10000);
+</script>
+</body>
+</html>

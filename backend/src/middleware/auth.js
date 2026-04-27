@@ -15,7 +15,7 @@ export function requireAuth(req, res, next) {
     req.user = jwt.verify(token, process.env.JWT_SECRET);
     next();
   } catch (err) {
-    res.clearCookie('token');
+    res.clearCookie('token', { httpOnly: true, sameSite: 'lax', secure: process.env.USE_HTTPS === 'true' });
     res.redirect('/login');
   }
 }
@@ -32,7 +32,7 @@ export function requireAuthApi(req, res, next) {
     req.user = jwt.verify(token, process.env.JWT_SECRET);
     next();
   } catch (err) {
-    res.clearCookie('token');
+    res.clearCookie('token', { httpOnly: true, sameSite: 'lax', secure: process.env.USE_HTTPS === 'true' });
     res.status(401).json({ error: 'Session expired' });
   }
 }

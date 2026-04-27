@@ -1,0 +1,447 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Exam Setup | ExamNexus</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#FF5722",
+              secondary: "#10B981",
+              danger: "#EF4444",
+              warning: "#F59E0B",
+              "background-light": "#F9FAFB",
+              "background-dark": "#111827",
+              "surface-light": "#FFFFFF",
+              "surface-dark": "#1F2937",
+              "text-light": "#1F2937",
+              "text-dark": "#F3F4F6",
+              "border-light": "#E5E7EB",
+              "border-dark": "#374151",
+              "subtext-light": "#64748B",
+              "subtext-dark": "#94A3B8",
+            },
+            fontFamily: {
+              sans: ["Inter", "sans-serif"],
+            },
+            borderRadius: {
+              DEFAULT: "0.5rem",
+            },
+          },
+        },
+      };
+    </script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/icon?family=Material+Icons+Round"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        font-family: "Inter", sans-serif;
+      }
+      ::-webkit-scrollbar {
+        width: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 3px;
+      }
+      .dark ::-webkit-scrollbar-thumb {
+        background: #475569;
+      }
+    </style>
+  </head>
+  <body
+    class="bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark antialiased h-screen flex overflow-hidden transition-colors duration-200"
+  >
+    <aside
+      id="sidebar-placeholder"
+      class="w-64 flex-shrink-0 bg-surface-light dark:bg-surface-dark border-r border-border-light dark:border-border-dark h-full"
+    ></aside>
+
+    <main class="flex-1 flex flex-col h-full overflow-hidden">
+      <header
+        class="bg-background-light dark:bg-background-dark border-b border-transparent px-8 py-6 flex items-center justify-between shrink-0"
+      >
+        <div class="flex flex-col space-y-1">
+          <nav
+            class="flex items-center text-sm text-subtext-light dark:text-subtext-dark space-x-2"
+          >
+            <span
+              class="hover:text-primary cursor-pointer transition-colors"
+              onclick="window.location.href = 'dashboard'"
+              >Dashboard</span
+            >
+            <span class="material-icons-round text-sm text-slate-400"
+              >chevron_right</span
+            >
+            <span class="font-medium text-slate-900 dark:text-white"
+              >Exam Setup</span
+            >
+            <span
+              class="ml-2 px-2 py-0.5 rounded-full bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 text-xs font-bold uppercase tracking-wide"
+              >Draft</span
+            >
+          </nav>
+        </div>
+        <div class="flex items-center space-x-4">
+          <button
+            class="text-sm font-medium text-subtext-light dark:text-subtext-dark hover:text-slate-900 dark:hover:text-white transition-colors"
+            onclick="alert('Draft Saved Successfully!')"
+          >
+            Save Draft
+          </button>
+          <button
+            onclick="publishExam()"
+            class="bg-primary hover:bg-orange-600 text-white px-5 py-2.5 rounded-lg text-sm font-medium shadow-sm flex items-center transition-colors"
+          >
+            <span class="material-icons-round text-base mr-2">publish</span>
+            Publish Exam
+          </button>
+        </div>
+      </header>
+
+      <div class="flex-1 overflow-y-auto px-8 pb-10">
+        <div class="mb-8">
+          <h2 class="text-3xl font-bold text-slate-900 dark:text-white mb-2">
+            Configure New Examination
+          </h2>
+          <p class="text-subtext-light dark:text-subtext-dark">
+            Define your assessment parameters and security protocols.
+          </p>
+        </div>
+
+
+          <div
+            class="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark p-6 shadow-sm"
+          >
+            <div class="flex items-center space-x-3 mb-6">
+              <div class="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
+                <span class="material-icons-round text-primary">info</span>
+              </div>
+              <h3 class="text-lg font-bold text-slate-900 dark:text-white">
+                Basic Exam Info
+              </h3>
+            </div>
+            <div class="space-y-5">
+              <div>
+                <label
+                  class="block text-xs font-bold text-subtext-light dark:text-subtext-dark uppercase tracking-wide mb-1.5"
+                  >Exam Title</label
+                >
+                <input
+                  id="examTitle"
+                  class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-4 py-2.5 text-slate-600 dark:text-slate-300 focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-shadow"
+                  placeholder="Enter exam title"
+                  type="text"
+                  value="e.g. Mid-term Biology 101"
+                />
+              </div>
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-xs font-bold text-subtext-light dark:text-subtext-dark uppercase tracking-wide mb-1.5">Course</label>
+                  <div class="relative">
+                    <select id="inp-course-select"
+                      class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-4 py-2.5 text-slate-900 dark:text-white appearance-none focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-shadow">
+                      <option value="">— select course —</option>
+                    </select>
+                    <span class="material-icons-round absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">expand_more</span>
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-xs font-bold text-subtext-light dark:text-subtext-dark uppercase tracking-wide mb-1.5">Section</label>
+                  <div class="relative">
+                    <select id="inp-section-select" disabled
+                      class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-4 py-2.5 text-slate-900 dark:text-white appearance-none focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-shadow disabled:opacity-50 disabled:cursor-not-allowed">
+                      <option value="">Select course first</option>
+                    </select>
+                    <span class="material-icons-round absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">expand_more</span>
+                  </div>
+                </div>
+              </div>
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-xs font-bold text-subtext-light dark:text-subtext-dark uppercase tracking-wide mb-1.5">Instructor <span class="text-slate-400 normal-case font-normal">(auto-filled)</span></label>
+                  <input id="inp-instructor" type="text" placeholder="e.g. Dr. Rahman"
+                    class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-4 py-2.5 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-shadow"/>
+                </div>
+                <div>
+                  <label class="block text-xs font-bold text-subtext-light dark:text-subtext-dark uppercase tracking-wide mb-1.5">Exam Type</label>
+                  <div class="relative">
+                    <select id="inp-exam-type"
+                      class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-4 py-2.5 text-slate-900 dark:text-white appearance-none focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-shadow">
+                      <option value="midterm">Midterm</option>
+                      <option value="quiz">Quiz</option>
+                      <option value="final">Final</option>
+                      <option value="mock">Mock</option>
+                    </select>
+                    <span class="material-icons-round absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">expand_more</span>
+                  </div>
+                </div>
+              </div>
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-xs font-bold text-subtext-light dark:text-subtext-dark uppercase tracking-wide mb-1.5">Date</label>
+                  <div class="relative">
+                    <input id="inp-date" type="date"
+                      class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-4 py-2.5 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-shadow"/>
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-xs font-bold text-subtext-light dark:text-subtext-dark uppercase tracking-wide mb-1.5">Start Time</label>
+                  <div class="relative">
+                    <input id="inp-time" type="time"
+                      class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-4 py-2.5 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-shadow"/>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+      </div>
+    </main>
+    <script src="../scripts/theme-controller.js"></script>
+<script src="../scripts/component-loader.js"></script>
+<script>
+// ── Helpers ──────────────────────────────────────────────────
+async function api(path, opts = {}) {
+  const res = await fetch(path, { credentials: 'include', ...opts });
+  if (res.status === 401) { window.location.href = '/login'; return null; }
+  return res;  // return raw response so callers can check res.ok
+}
+
+function showError(msg) {
+  let el = document.getElementById('publish-error');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'publish-error';
+    el.className = 'mt-4 px-4 py-3 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm font-medium border border-red-200 dark:border-red-800';
+    document.querySelector('.space-y-5').appendChild(el);
+  }
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+function hideError() {
+  const el = document.getElementById('publish-error');
+  if (el) el.style.display = 'none';
+}
+
+// ── Load course dropdown from DB ─────────────────────────────
+// Uses /api/students/sections which returns distinct sections
+// with course_code, course_name, year_session, year, initials.
+// comment out loadcoursedropdwon() for replacement
+async function loadCourseDropdown() {
+//  const res = await api('/api/students/sections');
+const res = await api('/api/students/sections-all');
+  if (!res || !res.ok) return;
+  const data = await res.json();
+
+  // Build unique course list from sections
+  const courses = new Map(); // course_code → course_name
+  (data.sections || []).forEach(sec => {
+    if (!courses.has(sec.course_code))
+      courses.set(sec.course_code, sec.course_name || sec.course_code);
+  });
+
+  // Store all sections for cascading later
+  window._allSections = data.sections || [];
+
+  const sel = document.getElementById('inp-course-select');
+  sel.innerHTML = '<option value="">— select course —</option>';
+  [...courses.entries()].sort().forEach(([code, name]) => {
+    const opt = document.createElement('option');
+    opt.value        = code;
+    opt.dataset.name = name;
+    opt.textContent  = `${code} — ${name}`;
+    sel.appendChild(opt);
+  });
+}
+
+// async function loadCourseDropdown() {
+//   const res = await api('/api/courses');        // hits courses table directly
+//   if (!res || !res.ok) return;
+//   const data = await res.json();
+
+//   window._allSections = [];                     // will be populated on course select
+
+//   const sel = document.getElementById('inp-course-select');
+//   sel.innerHTML = '<option value="">— select course —</option>';
+//   (data.courses || []).sort((a,b) => a.course_code.localeCompare(b.course_code))
+//     .forEach(c => {
+//       const opt = document.createElement('option');
+//       opt.value        = c.course_code;
+//       opt.dataset.name = c.course_name;
+//       opt.textContent  = `${c.course_code} — ${c.course_name}`;
+//       sel.appendChild(opt);
+//     });
+// }
+
+
+// ── Course → Section cascade ──────────────────────────────────
+// commented out this for course selection.
+document.getElementById('inp-course-select').addEventListener('change', function () {
+  const code    = this.value;
+  const secSel  = document.getElementById('inp-section-select');
+
+  if (!code) {
+    secSel.innerHTML = '<option value="">Select course first</option>';
+    secSel.disabled  = true;
+    document.getElementById('inp-instructor').value = '';
+    return;
+  }
+
+  // Filter pre-loaded sections for this course_code
+  const matching = (window._allSections || []).filter(s => s.course_code === code);
+
+  secSel.innerHTML = '<option value="">— select section —</option>';
+  secSel.disabled  = false;
+
+  matching.sort((a, b) => a.section_name.localeCompare(b.section_name))
+    .forEach(sec => {
+      const opt = document.createElement('option');
+      opt.value              = sec.section_id;
+      opt.dataset.initials   = sec.initials   || '';
+      opt.dataset.courseName = sec.course_name || code;
+      opt.textContent        = `Section ${sec.section_name}${sec.initials ? ' — ' + sec.initials : ''} (${sec.year_session} ${sec.year})`;
+      secSel.appendChild(opt);
+    });
+});
+
+// document.getElementById('inp-course-select').addEventListener('change', async function () {
+//   const code   = this.value;
+//   const secSel = document.getElementById('inp-section-select');
+
+//   if (!code) {
+//     secSel.innerHTML = '<option value="">Select course first</option>';
+//     secSel.disabled  = true;
+//     document.getElementById('inp-instructor').value = '';
+//     return;
+//   }
+
+//   const res  = await api(`/api/courses/${code}/sections`);
+//   const data = res?.ok ? await res.json() : { sections: [] };
+
+//   secSel.innerHTML = '<option value="">— select section —</option>';
+//   secSel.disabled  = false;
+
+//   (data.sections || [])
+//     .sort((a,b) => a.section_name.localeCompare(b.section_name))
+//     .forEach(sec => {
+//       const opt = document.createElement('option');
+//       opt.value              = sec.section_id;
+//       opt.dataset.initials   = sec.initials   || '';
+//       opt.dataset.courseName = sec.course_name || code;
+//       opt.textContent        = `Section ${sec.section_name}${sec.initials ? ' — ' + sec.initials : ''} (${sec.year_session} ${sec.year})`;
+//       secSel.appendChild(opt);
+//     });
+// });
+
+// ── Section → auto-fill Instructor ───────────────────────────
+document.getElementById('inp-section-select').addEventListener('change', function () {
+  const opt      = this.options[this.selectedIndex];
+  const initials = opt?.dataset.initials || '';
+  if (initials) document.getElementById('inp-instructor').value = initials;
+});
+
+// ── Publish Exam → POST /api/sessions ────────────────────────
+async function publishExam() {
+  hideError();
+
+  const title    = document.getElementById('examTitle').value.trim();
+  const courseEl = document.getElementById('inp-course-select');
+  const secEl    = document.getElementById('inp-section-select');
+  const instructor = document.getElementById('inp-instructor').value.trim();
+  const examType   = document.getElementById('inp-exam-type').value;
+  const date       = document.getElementById('inp-date').value;
+  const time       = document.getElementById('inp-time').value;
+
+  // Validation
+  if (!title || title === 'e.g. Mid-term Biology 101') {
+    showError('Exam Title is required.'); return;
+  }
+
+  // Build time_block string from date + start time if both set
+  let timeBlock = null;
+  if (date && time) {
+    const d = new Date(`${date}T${time}`);
+    timeBlock = d.toLocaleString('en-BD', {
+      day: '2-digit', month: 'short', year: 'numeric',
+      hour: '2-digit', minute: '2-digit', hour12: true,
+    });
+  } else if (time) {
+    timeBlock = time;
+  }
+
+  // Course name from selected option's data attribute
+  const courseOpt  = courseEl.options[courseEl.selectedIndex];
+  const courseName = courseOpt?.dataset.name || courseEl.value || null;
+
+  // section_id as integer (null if not selected)
+  const sectionId = secEl.value ? parseInt(secEl.value) : null;
+
+  // Set Publish button to loading state
+  const btn = document.querySelector('[onclick="publishExam()"]');
+  const origHTML = btn.innerHTML;
+  btn.disabled  = true;
+  btn.innerHTML = '<span class="material-icons-round text-base mr-2 animate-spin">refresh</span>Publishing…';
+
+  const res = await api('/api/sessions', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      name:            title,
+      course_name:     courseName  || null,
+      instructor_name: instructor  || null,
+      time_block:      timeBlock   || null,
+      exam_type:       examType    || 'midterm',
+      section_id:      sectionId,
+    }),
+  });
+
+  btn.disabled  = false;
+  btn.innerHTML = origHTML;
+
+  if (!res) return; // 401 already handled
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    showError(data.error || 'Failed to create session. Try again.');
+    return;
+  }
+
+  // Success → go to session detail page
+  //window.location.href = `/session?id=${data.session.id}`;
+  window.location.href = `/dashboard`;
+}
+
+// Enter key on any input triggers publish
+document.querySelectorAll('input, select').forEach(el => {
+  el.addEventListener('keydown', e => { if (e.key === 'Enter') publishExam(); });
+});
+
+// Load on page open
+loadCourseDropdown();
+</script>
+  </body>
+</html>

@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Proctor — All Sessions</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .modal-overlay {
+      display:none;position:fixed;inset:0;
+      background:rgba(0,0,0,0.6);
+      z-index:200;align-items:center;justify-content:center;
+    }
+    .modal-overlay.open { display:flex; }
+    .modal-box {
+      background:var(--surface);border:1px solid var(--border);
+      border-radius:14px;padding:28px 32px;width:min(480px,95vw);
+      display:flex;flex-direction:column;gap:16px;
+    }
+    .modal-title {
+      font-family:var(--fd);font-size:20px;font-weight:700;
+      letter-spacing:0.08em;text-transform:uppercase;
+    }
+    .form-field { display:flex;flex-direction:column;gap:6px; }
+
+    .session-active-dot {
+      width:7px;height:7px;border-radius:50%;
+      background:var(--green);box-shadow:0 0 5px var(--green);
+      display:inline-block;margin-right:6px;flex-shrink:0;
+    }
+
+    /* Search bar */
+    .search-bar {
+      display:flex;gap:10px;align-items:center;
+      margin-bottom:16px;
+    }
+    .search-bar input {
+      flex:1;
+    }
+    tr.hidden-row { display:none; }
+  </style>
+</head>
+<body>
+<div class="layout">
+  <div id="sidebar" style="min-width:200px;width:200px;flex-shrink:0"></div>
+
+  <main class="main">
+    <div class="page-header">
+      <div>
+        <div class="page-title">All Sessions</div>
+        <div class="page-sub" id="session-count">Loading...</div>
+      </div>
+      <button class="btn btn-primary" onclick="openModal()">+ New Session</button>
+    </div>
+
+    <!-- Search bar -->
+    <div class="search-bar">
+      <input class="input" id="search-input"
+        placeholder="Search by session name, course, or instructor..."
+        oninput="filterTable()">
+      <button class="btn btn-ghost" onclick="clearSearch()">✕ Clear</button>
+    </div>
+
+    <!-- Session table -->
+    <div class="card" style="padding:0;overflow:hidden">
+      <table class="table" id="sessions-table-el">
+        <thead>
+          <tr>
+            <th>Session</th>
+            <th>Course</th>
+            <th>Instructor</th>
+            <th>Time Block</th>
+            <th>Started</th>
+            <th>Status</th>
+            <th>Alerts</th>
+          </tr>
+        </thead>
+        <tbody id="sessions-table">
+          <tr><td colspan="7" style="color:var(--t3);text-align:center">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </main>
+</div>
+
+<!-- New Session Modal -->
+<div class="modal-overlay" id="modal">
+  <div class="modal-box">
+    <div class="modal-title">New Exam Session</div>
+
+    <div class="form-field">
+      <label>Session Name <span style="color:var(--red)">*</span></label>
+      <input class="input" id="inp-name"
+        placeholder="e.g. CSE299_Midterm_April2026" maxlength="80">
+      <span style="font-size:10px;color:var(--t3)">
+        Used as the recordings folder name. Special characters become underscores.
+      </span>
+    </div>
+
+    <!-- Course dropdown — populated from courses table -->
+    <div class="form-field">
+      <label>Course</label>
+      <select class="input" id="inp-course-select" style="padding:8px 10px;font-size:13px">
+        <option value="">Select course...</option>
+      </select>
+    </div>
+
+    <div class="form-field">
+      <label>Section</label>
+      <select class="input" id="inp-section-select" style="padding:8px 10px;font-size:13px"
+        disabled>
+        <option value="">Select course first</option>
+      </select>
+    </div>
+
+    <!-- Manual override if not in DB -->
+    <div class="form-field">
+      <label>Course Name <span style="font-size:10px;color:var(--t3);font-weight:400">
+        (override — auto-filled from selection above)</span></label>
+      <input class="input" id="inp-course" placeholder="e.g. Junior Design Project">
+    </div>
+
+    <div class="form-field">
+      <label>Instructor</label>
+      <input class="input" id="inp-instructor" placeholder="e.g. Dr. Rahman">
+    </div>
+
+    <div class="form-field">
+      <label>Time Block</label>
+      <input class="input" id="inp-time" placeholder="e.g. 09:00 – 11:00">
+    </div>
+
+    <div class="form-field">
+      <label>Exam Type</label>
+      <select class="input" id="inp-exam-type" style="padding:8px 10px;font-size:13px">
+        <option value="midterm">Midterm</option>
+        <option value="quiz">Quiz</option>
+        <option value="final">Final</option>
+        <option value="mock">Mock</option>
+      </select>
+    </div>
+
+    <div id="modal-error"
+      style="display:none;color:var(--red);font-size:12px;padding:8px 12px;
+             background:var(--rdim);border-radius:4px">
+    </div>
+
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="createSession()">▶ Start Session</button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/nav.js"></script>
+<script>
+  document.getElementById('sidebar').innerHTML = buildSidebar();
+  initSidebar();
+
+  let allSessions = [];
+
+  async function loadSessions() {
+    const data = await api('/api/sessions');
+    if (!data) return;
+
+    allSessions = data.sessions;
+    document.getElementById('session-count').textContent =
+      `${allSessions.length} session${allSessions.length !== 1 ? 's' : ''} total`;
+
+    renderTable(allSessions);
+  }
+
+  function renderTable(sessions) {
+    const tbody = document.getElementById('sessions-table');
+
+    if (sessions.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="7" style="color:var(--t3);text-align:center;padding:32px">
+            No sessions yet — click "+ New Session" to start
+          </td>
+        </tr>`;
+      return;
+    }
+
+    tbody.innerHTML = sessions.map(s => {
+      const isActive = !s.ended_at;
+      const started  = new Date(s.created_at).toLocaleString();
+      const alerts   = Number(s.detection_count);
+
+      // KEY FIX: pass session id in URL so session.html reads it
+      return `
+        <tr style="cursor:pointer"
+          onclick="window.location='/session?id=${s.id}'"
+          data-name="${(s.name || '').toLowerCase()}"
+          data-course="${(s.course_name || '').toLowerCase()}"
+          data-instructor="${(s.instructor_name || '').toLowerCase()}">
+          <td style="font-weight:500;font-family:var(--fd);font-size:14px;letter-spacing:0.04em">
+            ${isActive ? '<span class="session-active-dot"></span>' : ''}
+            ${s.name}
+          </td>
+          <td style="color:var(--t2)">${s.course_name || '—'}</td>
+          <td style="color:var(--t2)">${s.instructor_name || '—'}</td>
+          <td style="color:var(--t2)">${s.time_block || '—'}</td>
+          <td style="color:var(--t3);font-size:11px">${started}</td>
+          <td>
+            <span class="badge ${isActive ? 'badge-live' : 'badge-off'}">
+              ${isActive ? '● ACTIVE' : 'ENDED'}
+            </span>
+          </td>
+          <td style="color:${alerts>0?'var(--amber)':'var(--t3)'}">
+            ${alerts}
+          </td>
+        </tr>`;
+    }).join('');
+  }
+
+  // ── Search / filter ───────────────────────────────────────
+
+  function filterTable() {
+    const q     = document.getElementById('search-input').value.toLowerCase().trim();
+    const rows  = document.querySelectorAll('#sessions-table tr');
+
+    rows.forEach(row => {
+      if (!q) { row.classList.remove('hidden-row'); return; }
+      const name       = row.dataset.name       || '';
+      const course     = row.dataset.course     || '';
+      const instructor = row.dataset.instructor || '';
+      const match      = name.includes(q) || course.includes(q) || instructor.includes(q);
+      row.classList.toggle('hidden-row', !match);
+    });
+
+    // Update count
+    const visible = document.querySelectorAll('#sessions-table tr:not(.hidden-row)').length;
+    document.getElementById('session-count').textContent =
+      q ? `${visible} of ${allSessions.length} sessions` : `${allSessions.length} sessions total`;
+  }
+
+  function clearSearch() {
+    document.getElementById('search-input').value = '';
+    filterTable();
+  }
+
+  // ── Modal ─────────────────────────────────────────────────
+
+  function openModal() {
+    document.getElementById('modal').classList.add('open');
+    document.getElementById('inp-name').focus();
+    document.getElementById('modal-error').style.display = 'none';
+    loadCourseDropdown();
+  }
+
+  function closeModal() {
+    document.getElementById('modal').classList.remove('open');
+    ['inp-name','inp-course','inp-instructor','inp-time']
+      .forEach(id => { document.getElementById(id).value = ''; });
+    document.getElementById('inp-exam-type').value = 'midterm';
+    document.getElementById('inp-course-select').value = '';
+    document.getElementById('inp-section-select').innerHTML = '<option value="">Select course first</option>';
+    document.getElementById('inp-section-select').disabled = true;
+  }
+
+  document.getElementById('modal').addEventListener('click', e => {
+    if (e.target === document.getElementById('modal')) closeModal();
+  });
+
+  // Load courses for dropdown on modal open
+  async function loadCourseDropdown() {
+    try {
+      const res  = await fetch('/api/students?limit=1', { credentials: 'include' });
+      const data = await res.json();
+      // Fetch distinct courses from students API — reuse the enrolled data
+      const coursesRes = await fetch('/api/students?limit=50&q=', { credentials: 'include' });
+      const cData = await coursesRes.json();
+      const seen  = new Map();
+      (cData.students || []).forEach(s => {
+        if (s.course_code && !seen.has(s.course_code))
+          seen.set(s.course_code, s.course_name || s.course_code);
+      });
+      const sel = document.getElementById('inp-course-select');
+      sel.innerHTML = '<option value="">Select course...</option>';
+      [...seen.entries()].sort().forEach(([code, name]) => {
+        const opt = document.createElement('option');
+        opt.value   = code;
+        opt.dataset.name = name;
+        opt.text    = `${code} — ${name}`;
+        sel.appendChild(opt);
+      });
+    } catch (_) {}
+  }
+
+  document.getElementById('inp-course-select').addEventListener('change', async function() {
+    const code = this.value;
+    const selName = this.options[this.selectedIndex]?.dataset.name || '';
+    if (selName) document.getElementById('inp-course').value = selName;
+
+    const secSel = document.getElementById('inp-section-select');
+    if (!code) {
+      secSel.innerHTML = '<option value="">Select course first</option>';
+      secSel.disabled = true;
+      return;
+    }
+    // Fetch sections for this course from students table
+    secSel.innerHTML = '<option value="">Loading...</option>';
+    secSel.disabled  = false;
+    try {
+      const res  = await fetch(`/api/students?limit=50&q=&section_filter=${encodeURIComponent(code)}`, { credentials: 'include' });
+      const data = await res.json();
+      const seen = new Map();
+      (data.students || []).forEach(s => {
+        if (s.course_code === code && s.section_name) {
+          const key = `${s.section_name}`;
+          if (!seen.has(key)) seen.set(key, { name: key, initials: s.instructor_initials || '' });
+        }
+      });
+      secSel.innerHTML = '<option value="">Select section...</option>';
+      [...seen.values()].sort((a,b) => a.name.localeCompare(b.name)).forEach(sec => {
+        const opt = document.createElement('option');
+        opt.value = sec.name;
+        opt.text  = `Section ${sec.name}${sec.initials ? ' — ' + sec.initials : ''}`;
+        opt.dataset.initials = sec.initials;
+        secSel.appendChild(opt);
+      });
+    } catch (_) {
+      secSel.innerHTML = '<option value="">Could not load sections</option>';
+    }
+  });
+
+  document.getElementById('inp-section-select').addEventListener('change', function() {
+    const initials = this.options[this.selectedIndex]?.dataset.initials || '';
+    if (initials) document.getElementById('inp-instructor').value = initials;
+  });
+
+  async function createSession() {
+    const name       = document.getElementById('inp-name').value.trim();
+    const course     = document.getElementById('inp-course').value.trim();
+    const instructor = document.getElementById('inp-instructor').value.trim();
+    const time       = document.getElementById('inp-time').value.trim();
+    const examType   = document.getElementById('inp-exam-type').value;
+    const sectionName = document.getElementById('inp-section-select').value;
+    const courseCode  = document.getElementById('inp-course-select').value;
+
+    const errEl = document.getElementById('modal-error');
+    if (!name) {
+      errEl.textContent   = 'Session name is required';
+      errEl.style.display = 'block';
+      return;
+    }
+
+    const res  = await fetch('/api/sessions', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({
+        name,
+        course_name:     course     || null,
+        instructor_name: instructor || null,
+        time_block:      time       || null,
+        exam_type:       examType   || 'midterm',
+      })
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      errEl.textContent   = data.error || 'Failed to create session';
+      errEl.style.display = 'block';
+      return;
+    }
+
+    closeModal();
+    // Redirect to the new session's stats page
+    window.location.href = `/session?id=${data.session.id}`;
+  }
+
+  document.querySelectorAll('.modal-box .input').forEach(inp => {
+    inp.addEventListener('keydown', e => { if (e.key === 'Enter') createSession(); });
+  });
+
+  loadSessions();
+</script>
+</body>
+</html>

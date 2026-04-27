@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Proctor — Dashboard</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .live-stream-img {
+      width:100%;height:100%;object-fit:cover;display:block;background:#0d1117;
+    }
+
+    /* ── Central exam timer bar ────────────────────────────── */
+    /* Sits between session banner and feed grid.
+       Hidden until a 'start' signal is confirmed delivered.   */
+    #exam-timer-bar {
+      display: none;
+      align-items: center;
+      gap: 16px;
+      padding: 12px 18px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      margin-bottom: 16px;
+    }
+
+    /* Clicking the timer opens the adjust modal */
+    #timer-display-btn {
+      font-family: var(--fm);
+      font-size: 2.4rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      color: var(--green);
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0;
+      transition: color 0.3s, opacity 0.15s;
+      line-height: 1;
+    }
+    #timer-display-btn:hover { opacity: 0.75; }
+    #timer-display-btn.warn  { color: var(--amber); }
+    #timer-display-btn.ended { color: var(--red);   }
+
+    .timer-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .timer-state-label {
+      font-size: 10px;
+      font-family: var(--fm);
+      letter-spacing: 0.10em;
+      font-weight: 600;
+    }
+    .timer-hint {
+      font-size: 10px;
+      color: var(--t3);
+    }
+
+    /* ── Adjust-time modal ─────────────────────────────────── */
+    #adjust-modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+    }
+    #adjust-modal-overlay.open { display: flex; }
+    #adjust-modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 26px 30px;
+      width: min(380px, 95vw);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    #adjust-modal h3 {
+      font-family: var(--fd);
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+  </style>
+</head>
+<body>
+<div class="layout">
+  <div id="sidebar" style="min-width:200px;width:200px;flex-shrink:0"></div>
+
+  <main class="main">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Live Feeds</div>
+        <div class="page-sub" id="feed-summary">Loading...</div>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center">
+        <button class="btn btn-ghost" id="filter-all"
+          onclick="setFilter('all')">All</button>
+        <button class="btn btn-ghost" id="filter-live"
+          onclick="setFilter('live')">Live</button>
+        <button class="btn btn-ghost" id="filter-alert"
+          onclick="setFilter('alert')">Alerts</button>
+        <hr style="width:1px;height:20px;border:none;border-left:1px solid var(--border)">
+        <a href="/allsessions" class="btn btn-primary"
+          style="font-size:11px;padding:6px 14px">
+          + New Session
+        </a>
+      </div>
+    </div>
+
+    <!-- Active session banner -->
+    <div class="session-banner" id="session-banner" style="display:none">
+      <div class="session-dot"></div>
+      <div>
+        <div class="session-name" id="banner-name">—</div>
+        <div class="session-meta" id="banner-meta">—</div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════
+         CENTRAL EXAM TIMER BAR
+         Hidden until a 'start' signal_ack with status='delivered'
+         arrives. Shows countdown for all pen units simultaneously.
+         Click the time display to open the adjust modal.
+    ══════════════════════════════════════════════════════════ -->
+    <div id="exam-timer-bar">
+
+      <!-- Clickable timer display -->
+      <button id="timer-display-btn" onclick="openAdjustModal()"
+        title="Click to adjust time">
+        --:--
+      </button>
+
+      <!-- State label + hint -->
+      <div class="timer-meta">
+        <span class="timer-state-label" id="timer-state-label"
+          style="color:var(--t3)">
+          WAITING
+        </span>
+        <span class="timer-hint">Central exam timer — all units</span>
+        <span class="timer-hint" style="color:var(--accent)">
+          Click time to adjust ↑
+        </span>
+      </div>
+
+      <!-- Spacer -->
+      <div style="flex:1"></div>
+
+      <!-- Manual controls for when ESP32 is not connected
+           (mirrors candidate page controls for the proctor) -->
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+        <button class="btn btn-ghost" style="font-size:11px;padding:5px 12px"
+          onclick="localTimerCmd('pause')">⏸</button>
+        <button class="btn btn-ghost" style="font-size:11px;padding:5px 12px"
+          onclick="localTimerCmd('start')">▶</button>
+        <button class="btn btn-ghost" style="font-size:11px;padding:5px 12px"
+          onclick="localTimerCmd('end')">⏹</button>
+      </div>
+
+    </div>
+
+    <!-- WS reconnecting notice -->
+    <div id="ws-status" style="
+      display:none;padding:8px 14px;
+      background:rgba(255,176,32,0.08);
+      border:1px solid rgba(255,176,32,0.25);
+      border-radius:8px;font-size:11px;
+      color:var(--amber);margin-bottom:12px">
+      ⚠ Live feed connection lost — reconnecting...
+    </div>
+
+    <!-- Feed grid -->
+    <div class="feed-grid" id="feed-grid">
+      <div style="color:var(--t3);font-size:12px">Loading feeds...</div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     ADJUST TIME MODAL
+     Opens when proctor clicks the timer display.
+     Allows setting remaining time directly (minutes + seconds).
+     Does NOT send a signal — only adjusts local countdown.
+     To send a new timer signal, use the candidate page.
+════════════════════════════════════════════════════════════ -->
+<div id="adjust-modal-overlay">
+  <div id="adjust-modal">
+    <h3>Adjust Timer</h3>
+
+    <p style="font-size:12px;color:var(--t3);margin-top:-8px">
+      Sets the remaining time shown on this dashboard.
+      This does NOT send a command to pen units — use the
+      candidate page to resend a timer signal to hardware.
+    </p>
+
+    <div style="display:flex;align-items:center;gap:10px">
+      <div style="display:flex;flex-direction:column;gap:4px;flex:1">
+        <label style="font-size:11px;color:var(--t3)">Minutes</label>
+        <input class="input" type="number" id="adj-minutes"
+          min="0" max="300" placeholder="0" style="font-size:1.4rem;
+          text-align:center;padding:10px">
+      </div>
+      <span style="font-size:1.6rem;color:var(--t3);padding-top:20px">:</span>
+      <div style="display:flex;flex-direction:column;gap:4px;flex:1">
+        <label style="font-size:11px;color:var(--t3)">Seconds</label>
+        <input class="input" type="number" id="adj-seconds"
+          min="0" max="59" placeholder="0" style="font-size:1.4rem;
+          text-align:center;padding:10px">
+      </div>
+    </div>
+
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-ghost" onclick="closeAdjustModal()">
+        Cancel
+      </button>
+      <button class="btn btn-primary" onclick="applyAdjust()">
+        Set Time
+      </button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/nav.js"></script>
+<script>
+  document.getElementById('sidebar').innerHTML = buildSidebar();
+  initSidebar();
+
+  let allFeeds     = [];
+  let activeFilter = 'all';
+
+  // ── Session banner ────────────────────────────────────────
+
+  async function loadSessionBanner() {
+    const data = await api('/api/sessions/active');
+    if (!data || !data.session) {
+      document.getElementById('session-banner').style.display = 'none';
+      return;
+    }
+    const s = data.session;
+    document.getElementById('session-banner').style.display = 'flex';
+    document.getElementById('banner-name').textContent = s.name;
+    const parts = [];
+    if (s.course_name)     parts.push(s.course_name);
+    if (s.instructor_name) parts.push(s.instructor_name);
+    if (s.time_block)      parts.push(s.time_block);
+    document.getElementById('banner-meta').textContent = parts.join(' · ');
+  }
+
+  // ════════════════════════════════════════════════════════════
+  //  CENTRAL EXAM TIMER
+  //
+  //  State machine — mirrors candidate page logic but driven
+  //  by signal_ack WS messages instead of button clicks.
+  //
+  //  Only activates on confirmed delivery (status='delivered').
+  //  A 202 (undelivered) does NOT start the timer.
+  //
+  //  timerTotal:  total ms set by last 'timer' command
+  //  timerRemain: ms remaining right now
+  //  timerState:  'idle' | 'set' | 'running' | 'paused' | 'ended'
+  // ════════════════════════════════════════════════════════════
+
+  let timerTotal    = 0;
+  let timerRemain   = 0;
+  let timerState    = 'idle';
+  let timerInterval = null;
+
+  // Format ms → MM:SS
+  function fmtMs(ms) {
+    const s = Math.max(0, Math.ceil(ms / 1000));
+    const m = Math.floor(s / 60);
+    return `${String(m).padStart(2,'0')}:${String(s % 60).padStart(2,'0')}`;
+  }
+
+  function timerTick() {
+    if (timerState !== 'running') return;
+    timerRemain = Math.max(0, timerRemain - 1000);
+    renderTimer();
+    if (timerRemain === 0) {
+      timerState = 'ended';
+      clearInterval(timerInterval);
+      timerInterval = null;
+      renderTimer();
+    }
+  }
+
+  function renderTimer() {
+    const bar     = document.getElementById('exam-timer-bar');
+    const display = document.getElementById('timer-display-btn');
+    const stLabel = document.getElementById('timer-state-label');
+
+    // Show bar once timer has been set at least once
+    if (timerState !== 'idle') bar.style.display = 'flex';
+
+    display.textContent = timerState === 'idle' ? '--:--' : fmtMs(timerRemain);
+
+    // Colour
+    display.className = '';
+    if (timerState === 'ended' || timerRemain === 0) {
+      display.classList.add('ended');
+    } else if (timerRemain < 5 * 60 * 1000 && timerState === 'running') {
+      display.classList.add('warn');
+    }
+
+    // State label
+    const stateMap = {
+      idle:    { label: 'WAITING',     color: 'var(--t3)'   },
+      set:     { label: 'SET',         color: 'var(--t3)'   },
+      running: { label: '● RUNNING',   color: 'var(--green)' },
+      paused:  { label: '⏸ PAUSED',   color: 'var(--amber)' },
+      ended:   { label: '⏹ ENDED',   color: 'var(--red)'   },
+    };
+    const st = stateMap[timerState] || stateMap.idle;
+    stLabel.textContent = st.label;
+    stLabel.style.color = st.color;
+  }
+
+  // Apply a confirmed-delivered command to the timer state
+  function applyTimerSignal(cmd, durationMs) {
+    switch (cmd) {
+      case 'timer':
+        // Set total time, go to 'set' — awaiting start command
+        timerTotal  = durationMs;
+        timerRemain = durationMs;
+        timerState  = 'set';
+        if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+        break;
+
+      case 'start':
+        // Start ticking if timer was set and not already running/ended
+        if (timerState === 'set' || timerState === 'paused') {
+          timerState    = 'running';
+          timerInterval = setInterval(timerTick, 1000);
+        } else if (timerState === 'idle') {
+          // Start pressed without a prior timer command.
+          // Show the bar as running but with no countdown (no total set).
+          timerState = 'running';
+          timerInterval = setInterval(timerTick, 1000);
+        }
+        break;
+
+      case 'pause':
+        if (timerState === 'running') {
+          timerState = 'paused';
+          if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+        }
+        break;
+
+      case 'end':
+        timerState  = 'ended';
+        timerRemain = 0;
+        if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+        break;
+
+      case 'reset':
+        timerRemain = timerTotal;
+        timerState  = timerTotal > 0 ? 'set' : 'idle';
+        if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+        break;
+
+      case 'deduct':
+        // durationMs here is the time_ms value from the signal
+        if (timerTotal > 0) {
+          timerRemain = Math.max(0, timerRemain - durationMs);
+          if (timerRemain === 0) {
+            timerState = 'ended';
+            if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+          }
+        }
+        break;
+    }
+    renderTimer();
+  }
+
+  // Manual override buttons in the timer bar (no ESP32 signal sent)
+  function localTimerCmd(cmd) {
+    applyTimerSignal(cmd, 0);
+  }
+
+  // ── Adjust Time Modal ─────────────────────────────────────
+
+  function openAdjustModal() {
+    // Pre-fill with current remaining time
+    const totalSec = Math.ceil(timerRemain / 1000);
+    document.getElementById('adj-minutes').value = Math.floor(totalSec / 60);
+    document.getElementById('adj-seconds').value = totalSec % 60;
+    document.getElementById('adjust-modal-overlay').classList.add('open');
+    document.getElementById('adj-minutes').focus();
+    document.getElementById('adj-minutes').select();
+  }
+
+  function closeAdjustModal() {
+    document.getElementById('adjust-modal-overlay').classList.remove('open');
+  }
+
+  function applyAdjust() {
+    const mins = parseInt(document.getElementById('adj-minutes').value) || 0;
+    const secs = parseInt(document.getElementById('adj-seconds').value) || 0;
+    const newMs = (mins * 60 + secs) * 1000;
+
+    if (newMs < 0) return;
+
+    timerRemain = newMs;
+    // If we're setting time while idle, move to 'set' state
+    if (timerState === 'idle' && newMs > 0) {
+      timerTotal = newMs;
+      timerState = 'set';
+    }
+    // If ended but proctor adds time, resume paused state
+    if (timerState === 'ended' && newMs > 0) {
+      timerState = 'paused';
+      if (!timerTotal) timerTotal = newMs;
+    }
+
+    renderTimer();
+    closeAdjustModal();
+  }
+
+  // Close modal on backdrop click
+  document.getElementById('adjust-modal-overlay')
+    .addEventListener('click', e => {
+      if (e.target.id === 'adjust-modal-overlay') closeAdjustModal();
+    });
+
+  // Allow Enter key in modal inputs
+  ['adj-minutes','adj-seconds'].forEach(id => {
+    document.getElementById(id)
+      .addEventListener('keydown', e => { if (e.key === 'Enter') applyAdjust(); });
+  });
+
+  // ── Feed loading ──────────────────────────────────────────
+
+  async function loadFeeds() {
+    const data = await api('/api/feeds');
+    if (!data) return;
+    allFeeds = data;
+    renderFeeds();
+  }
+
+  function setFilter(f) {
+    activeFilter = f;
+    ['all','live','alert'].forEach(key => {
+      const btn = document.getElementById(`filter-${key}`);
+      btn.style.background  = key === f ? 'var(--adim)' : '';
+      btn.style.color       = key === f ? 'var(--accent)' : '';
+      btn.style.borderColor = key === f ? 'var(--accent)' : '';
+    });
+    renderFeeds();
+  }
+
+  function renderFeeds() {
+    const liveCount  = allFeeds.filter(f => f.connected).length;
+    const alertCount = allFeeds.filter(f => Number(f.alert_count) > 0).length;
+    document.getElementById('feed-summary').textContent =
+      `${liveCount} connected · ${alertCount} flagged`;
+
+    let filtered = allFeeds;
+    if (activeFilter === 'live')  filtered = allFeeds.filter(f => f.connected);
+    if (activeFilter === 'alert') filtered = allFeeds.filter(f => Number(f.alert_count) > 0);
+
+    const grid = document.getElementById('feed-grid');
+    if (filtered.length === 0) {
+      grid.innerHTML = `<div style="color:var(--t3);font-size:12px;padding:40px 0">
+        No feeds match this filter</div>`;
+      return;
+    }
+
+    grid.innerHTML = filtered.map(feed => {
+      const alerts     = Number(feed.alert_count);
+      const hasAlert   = alerts > 0;
+      const isLive     = feed.connected;
+      const badgeClass = !isLive ? 'offline' : hasAlert ? 'alert' : 'live';
+      const badgeText  = !isLive ? 'OFFLINE'  : hasAlert ? 'ALERT'  : 'LIVE';
+      const cardClass  = !isLive ? 'offline'  : hasAlert ? 'alert'  : '';
+
+      return `
+        <div class="feed-card ${cardClass}" id="card-${feed.id}">
+          <a href="/candidate/${feed.id}"
+            style="text-decoration:none;color:inherit;display:block">
+            <div class="feed-video">
+              ${isLive
+                ? `<div style="position:relative;width:100%;height:100%;
+                               background:#0d1117;display:flex;
+                               align-items:center;justify-content:center;">
+                     <img id="live-feed-${feed.id}"
+                       class="live-stream-img" src="" alt="${feed.label}">
+                     <div id="await-${feed.id}"
+                       style="position:absolute;font-size:10px;
+                              letter-spacing:0.10em;color:#445566;
+                              font-family:monospace;pointer-events:none">
+                       AWAITING FEED
+                     </div>
+                   </div>`
+                : `<div class="feed-placeholder">
+                     <div class="feed-icon">◈</div>
+                     <div class="feed-status-text">OFFLINE</div>
+                   </div>`
+              }
+              <div class="feed-badge ${badgeClass}">
+                ${isLive ? '<span class="feed-dot"></span>' : ''}${badgeText}
+              </div>
+            </div>
+            <div class="feed-footer"
+              style="display:flex;align-items:center;
+                     justify-content:space-between;gap:6px">
+              <div class="feed-name" style="flex-shrink:0">${feed.label}</div>
+              <div style="flex:1;text-align:center">
+                ${hasAlert
+                  ? `<span class="feed-flags">${alerts} flag${alerts>1?'s':''}</span>`
+                  : `<span style="font-size:10px;color:var(--t3)">Clear</span>`
+                }
+              </div>
+              <button
+                onclick="event.stopPropagation();event.preventDefault();
+                  removeFeed(${feed.id},'${feed.label}')"
+                style="flex-shrink:0;width:auto;padding:3px 8px;font-size:9px;
+                  background:transparent;border:1px solid rgba(255,59,59,0.3);
+                  color:var(--red);border-radius:3px;cursor:pointer;
+                  font-family:var(--fm);letter-spacing:0.06em">
+                ✕ REMOVE
+              </button>
+            </div>
+          </a>
+        </div>`;
+    }).join('');
+  }
+
+  // ── Dashboard WebSocket — exponential backoff reconnect ───
+  // Does NOT use location.reload() — prevents the freeze loop.
+
+  let dashWs             = null;
+  let wsRetryDelay       = 1000;
+  let wsRetryTimer       = null;
+  let wsIntentionalClose = false;
+
+  function connectDashWs() {
+    if (wsRetryTimer) { clearTimeout(wsRetryTimer); wsRetryTimer = null; }
+
+    const url = `${window.location.origin
+      .replace('http','ws')
+      .replace('https','wss')}/ws?role=dashboard`;
+
+    dashWs            = new WebSocket(url);
+    dashWs.binaryType = 'arraybuffer';
+
+    dashWs.onopen = () => {
+      document.getElementById('ws-status').style.display = 'none';
+      wsRetryDelay = 1000;
+    };
+
+    dashWs.onmessage = (event) => {
+      // ── Binary: camera JPEG frame ────────────────────────
+      if (event.data instanceof ArrayBuffer) {
+        const view   = new DataView(event.data);
+        const feedId = view.getUint32(0);
+        const blob   = new Blob([event.data.slice(4)], { type: 'image/jpeg' });
+        const url    = URL.createObjectURL(blob);
+        const img    = document.getElementById(`live-feed-${feedId}`);
+        if (img) {
+          const old = img.src;
+          img.src = url;
+          if (old.startsWith('blob:')) URL.revokeObjectURL(old);
+          const awaitEl = document.getElementById(`await-${feedId}`);
+          if (awaitEl) awaitEl.style.display = 'none';
+        } else {
+          URL.revokeObjectURL(url);
+        }
+        return;
+      }
+
+      // ── JSON messages ────────────────────────────────────
+      let msg;
+      try { msg = JSON.parse(event.data); } catch (_) { return; }
+
+      if (msg.type === 'feed_connected' || msg.type === 'feed_disconnected') {
+        loadFeeds();
+        return;
+      }
+
+      // signal_ack: broadcast from signals.js after each serial write.
+      // Only update the central timer on confirmed delivery (status='delivered').
+      // An undelivered signal (202 response) does NOT start the countdown.
+      if (msg.type === 'signal_ack' && msg.status === 'delivered') {
+        applyTimerSignal(msg.cmd, msg.duration_ms || msg.time_ms || 0);
+      }
+    };
+
+    dashWs.onclose = (event) => {
+      if (wsIntentionalClose) return;
+      document.getElementById('ws-status').style.display = 'block';
+      wsRetryTimer = setTimeout(() => {
+        connectDashWs();
+        wsRetryDelay = Math.min(wsRetryDelay * 2, 30000);
+      }, wsRetryDelay);
+    };
+
+    dashWs.onerror = () => {};
+  }
+
+  window.addEventListener('beforeunload', () => {
+    wsIntentionalClose = true;
+    if (dashWs) dashWs.close();
+  });
+
+  // ── Feed removal ──────────────────────────────────────────
+
+  async function removeFeed(id, label) {
+    if (!confirm(`Remove "${label}" from dashboard?`)) return;
+    const res  = await fetch(`/api/feeds/${id}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (data.success) loadFeeds();
+    else alert('Error: ' + data.error);
+  }
+
+  // ── Init ──────────────────────────────────────────────────
+
+  connectDashWs();
+  loadSessionBanner();
+  loadFeeds();
+  setInterval(loadFeeds, 5000);
+  setInterval(loadSessionBanner, 30000);
+  renderTimer(); // initialise display to --:--
+</script>
+</body>
+</html>

@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ExamNexus</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+      rel="stylesheet"
+    />
+
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#FF5722",
+              secondary: "#10B981",
+              danger: "#EF4444",
+              warning: "#F59E0B",
+              "background-light": "#F9FAFB",
+              "background-dark": "#111827",
+              "surface-light": "#FFFFFF",
+              "surface-dark": "#1F2937",
+              "text-light": "#1F2937",
+              "text-dark": "#F3F4F6",
+              "border-light": "#E5E7EB",
+              "border-dark": "#374151",
+            },
+            fontFamily: {
+              sans: ["Inter", "sans-serif"],
+            },
+            borderRadius: {
+              DEFAULT: "0.5rem",
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      ::-webkit-scrollbar {
+        width: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 3px;
+      }
+      .dark ::-webkit-scrollbar-thumb {
+        background: #475569;
+      }
+      .testblack{
+background-color: black;
+      }
+      /* 1. Ensure the page container handles the centering */
+#page-landing {
+  display: flex;
+  justify-content: center; /* Horizontal center */
+  align-items: center;     /* Vertical center */
+  width: 100%;             /* Occupy remaining space next to sidebar */
+}
+
+.landing-wrap {
+  width: 100%;
+  max-width: 860px;        /* Keeps the grid from getting too wide */
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+/* 3. Center the sub-text specifically */
+.landing-sub {
+  text-align: center;
+  margin-bottom: 1rem;
+}
+    </style>
+  <link rel="stylesheet" href="../pages/style.css"/>
+
+</head>
+  <body
+    class="bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark font-sans antialiased h-screen flex transition-colors duration-200 relative"
+  >
+
+<!-- ══════════════════════════════════════════
+     PAGE 1 — Landing
+══════════════════════════════════════════ -->
+<div id="sidebar-placeholder"></div>
+<div id="page-landing" class="page">
+
+  <div class="landing-wrap">
+    <div class="landing-head">
+      <div class="brand">ExamNexus</div>
+      <button class="theme-pill" id="theme-btn-1">Toggle theme</button>
+    </div>
+    
+    <p class="landing-sub">Select how you are connecting to the central unit</p>
+
+    <div class="mode-grid">
+
+      <button class="mode-card" data-pick="ble">
+        <span class="mode-icon">⬡</span>
+        <span class="mode-title">Bluetooth</span>
+        <span class="mode-desc">Connect via Web Bluetooth. Wemos units connect to the ESP32 over WiFi automatically.</span>
+      </button>
+
+      <button class="mode-card" data-pick="ap">
+        <span class="mode-icon">◈</span>
+        <span class="mode-title">WiFi — Access Point</span>
+        <span class="mode-desc">ESP32 hosts its own hotspot. Join <code>ExamNexus</code> on this device to connect.</span>
+      </button>
+
+      <button class="mode-card" data-pick="sta">
+        <span class="mode-icon">◎</span>
+        <span class="mode-title">WiFi — Station</span>
+        <span class="mode-desc">ESP32 joins your router. Connect this device to the same network.</span>
+      </button>
+
+      <button class="mode-card" data-pick="usb">
+        <span class="mode-icon">⬡</span>
+        <span class="mode-title">USB Serial</span>
+        <span class="mode-desc">Connect via USB cable directly. Requires Chrome or Edge with Web Serial API support.</span>
+      </button>
+
+      <button class="mode-card" id="btn-mock">
+        <span class="mode-icon">🧪</span>
+        <span class="mode-title">Simulator Mode</span>
+        <span class="mode-desc">For testing the UI without hardware.</span>
+      </button>
+
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     PAGE 2 — Setup
+══════════════════════════════════════════ -->
+<div id="page-setup" class="page hidden">
+  <div class="setup-wrap">
+
+    <div class="setup-topbar">
+      <button class="back-btn" id="back-btn">← Back</button>
+      <span class="brand small">ExamNexus</span>
+      <button class="theme-pill" id="theme-btn-2">Toggle theme</button>
+    </div>
+
+    <!-- BLE -->
+    <div id="sec-ble" class="setup-sec hidden">
+      <h1>Bluetooth</h1>
+      <ol class="steps">
+        <li>Press the mode button on the ESP32 until the OLED shows <code>[Bluetooth]</code>.</li>
+        <li>The ESP32's <code>ExamNexus</code> WiFi hotspot will still be running for the Wemos units.</li>
+        <li>Click <strong>Scan &amp; Connect</strong> below and select <strong>ExamNexus</strong> from the device picker.</li>
+      </ol>
+      <div class="info-note">Web Bluetooth requires <strong>Chrome or Edge</strong>. Does not work on Firefox or Safari.</div>
+      <button class="btn-primary wide" id="ble-btn">Scan &amp; Connect</button>
+    </div>
+
+    <!-- AP -->
+    <div id="sec-ap" class="setup-sec hidden">
+      <h1>WiFi — Access Point</h1>
+      <ol class="steps">
+        <li>Press the mode button on the ESP32 until the OLED shows <code>[WiFi AP]</code>.</li>
+        <li>On this device, connect to WiFi network <code>Proctopen</code> with password <code>proctopen123</code>.</li>
+        <li>Click <strong>Connect</strong> below.</li>
+      </ol>
+      <div class="info-note">Wemos units also connect to <code>ExamNexus</code> automatically.</div>
+      <button class="btn-primary wide" id="ap-btn">Connect</button>
+    </div>
+
+    <!-- STA -->
+    <div id="sec-sta" class="setup-sec hidden">
+      <h1>WiFi — Station</h1>
+      <ol class="steps">
+        <li>Press the mode button on the ESP32 until the OLED shows <code>[WiFi STA]</code>.</li>
+        <li>First time? Join <code>ExamNexus</code> WiFi and visit <code>192.168.4.1</code> to enter router credentials.</li>
+        <li>Connect this device to the same router network, then click <strong>Connect</strong>.</li>
+      </ol>
+      <div class="info-note">Wemos units receive router credentials automatically from the ESP32.</div>
+      <button class="btn-primary wide" id="sta-btn">Connect</button>
+    </div>
+
+    <!-- USB -->
+    <div id="sec-usb" class="setup-sec hidden">
+      <h1>USB Serial</h1>
+      <ol class="steps">
+        <li>Press the mode button on the ESP32 until the OLED shows <code>[USB Serial]</code>.</li>
+        <li>Connect the ESP32 to this device via USB cable.</li>
+        <li>Click <strong>Connect</strong> below. Your browser will show a port picker — select the ESP32 port.</li>
+      </ol>
+      <div class="info-note">Web Serial requires <strong>Chrome or Edge</strong>. Does not work on Firefox or Safari.</div>
+      <button class="btn-primary wide" id="usb-btn">Connect</button>
+    </div>
+
+    <!-- Exam mode + grid size (shown after connection type selected) -->
+    <div id="sec-exam-config" class="setup-sec hidden">
+      <h2 class="setup-section-title">Exam configuration</h2>
+
+      <div class="exam-mode-toggle">
+        <span class="toggle-label">Roll Call</span>
+        <label class="toggle-switch">
+          <input type="checkbox" id="mode-toggle"/>
+          <span class="toggle-slider"></span>
+        </label>
+        <span class="toggle-label">Fixed Wemos</span>
+      </div>
+
+      <div class="grid-config">
+        <label class="field-label">Grid size</label>
+        <div class="grid-size-inputs">
+          <input id="grid-rows" type="number" min="1" max="20" value="3" title="Rows"/>
+          <span class="dur-sep">rows</span>
+          <span class="dur-sep">×</span>
+          <input id="grid-cols" type="number" min="1" max="20" value="4" title="Columns"/>
+          <span class="dur-sep">cols</span>
+        </div>
+        <p class="field-hint">Row 1 is closest to the ExamNexus (front of room).</p>
+      </div>
+    </div>
+
+    <div class="status-row" id="setup-status-row">
+      <span class="dot" id="setup-dot"></span>
+      <span id="setup-status-text">Not connected</span>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     PAGE 3 — Dashboard
+══════════════════════════════════════════ -->
+<div id="page-dash" class="page hidden">
+
+  <header>
+    <div class="header-left">
+      <span class="brand small">ExamNexus</span>
+      <span class="chip" id="mode-chip">—</span>
+      <span class="chip" id="sta-chip" style="display:none">STA ✓</span>
+      <span class="chip" id="exam-mode-chip">—</span>
+    </div>
+    <div class="header-right">
+      <span class="dot connected" id="hdr-dot"></span>
+      <button class="btn-ghost small" id="disconnect-btn">Disconnect</button>
+      <button class="theme-pill" id="theme-btn-3">Theme</button>
+    </div>
+  </header>
+
+  <main>
+
+    <!-- Exam controls -->
+    <section class="card">
+      <h2 class="card-title">Exam</h2>
+      <div class="duration-row">
+        <div class="dur-group">
+          <label class="field-label">Duration</label>
+          <div class="dur-inputs">
+            <input id="inp-h" type="number" min="0" max="23" value="0" title="Hours"/>
+            <span class="dur-sep">h</span>
+            <input id="inp-m" type="number" min="0" max="59" value="90" title="Minutes"/>
+            <span class="dur-sep">m</span>
+            <input id="inp-s" type="number" min="0" max="59" value="0" title="Seconds"/>
+            <span class="dur-sep">s</span>
+          </div>
+        </div>
+        <button class="btn-secondary" id="set-timer-btn">Set Timer</button>
+      </div>
+      <div class="big-timer" id="big-timer">--:--</div>
+      <div class="exam-btns">
+        <button class="btn-green"  id="start-btn">▶ Start</button>
+        <button class="btn-amber"  id="pause-btn">⏸ Pause</button>
+        <button class="btn-red"    id="end-btn">⏹ End</button>
+        <button class="btn-ghost"  id="reset-btn">↺ Reset</button>
+      </div>
+    </section>
+
+    <!-- Grid view -->
+    <section class="card" id="grid-section">
+      <div class="card-titlebar">
+        <h2 class="card-title">
+          Seat grid
+          <span class="chip" id="unit-count">0</span>
+        </h2>
+        <div class="grid-header-right">
+          <span class="field-hint" id="grid-hint">Drag unassigned units into seats</span>
+        </div>
+      </div>
+
+      <!-- Unassigned tray -->
+      <div id="unassigned-tray" class="unassigned-tray">
+        <span class="tray-label">Unassigned</span>
+        <div id="tray-units" class="tray-units"></div>
+      </div>
+
+      <!-- Proctor row label -->
+      <div class="proctor-row">
+        <span>▲ Proctor / Front of room</span>
+      </div>
+
+      <!-- Grid -->
+      <div id="seat-grid" class="seat-grid"></div>
+
+    </section>
+
+    <!-- Raw JSON  removed by using style can bring it back by removing the style in the section-->
+    <section class="card" style="visibility:hidden;pointer-events:none;position:absolute">
+      <h2 class="card-title">Raw command</h2>
+      <p class="field-hint">Send any JSON directly — for testing.</p>
+      <div class="input-row">
+        <input id="raw-inp" type="text" placeholder='{"cmd":"warn","device_id":1}'/>
+        <button class="btn-primary" id="raw-btn">Send</button>
+      </div>
+    </section>
+
+    <!-- Log -->
+    <section class="card">
+      <div class="card-titlebar">
+        <h2 class="card-title">Log</h2>
+        <button class="btn-ghost small" id="clear-log-btn">Clear</button>
+      </div>
+      <div id="log"></div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ══════════════════════════════════════════
+Cell action panel (replaces old modal)
+══════════════════════════════════════════ -->
+<div id="modal-bg" class="modal-bg hidden">
+  <div class="modal">
+
+    <div class="modal-head">
+      <div>
+        <h3 id="modal-title">Unit actions</h3>
+        <p id="modal-subtitle" class="modal-subtitle"></p>
+      </div>
+      <button class="icon-btn" id="modal-close">✕</button>
+    </div>
+
+
+    <!-- ═══════════════════════════════════════════════════════
+         Ghost elements — app.js accesses these unconditionally.
+         Kept hidden; penapp-ext.js fills modal-name / modal-student-id
+         so the Save button in roll-call mode has data to write.
+    ════════════════════════════════════════════════════════ -->
+    <!-- <img  id="modal-photo"             src="" alt="" style="display:none"/>
+    <span id="modal-photo-placeholder"               style="display:none"></span>
+    <div  id="modal-student-info"  class="modal-student-info hidden" style="visibility:hidden;pointer-events:none;position:absolute"></div>
+    <div  id="modal-fixed-info"    class="modal-student-info hidden">
+      <div class="student-photo-wrap" style="visibility:hidden;pointer-events:none;position:absolute">
+        <img id="modal-fixed-photo" src="" alt="" class="student-photo"/>
+      </div>
+      <div class="student-fields">
+        <p class="fixed-name" id="modal-fixed-name">—</p>
+        <p class="fixed-id"   id="modal-fixed-id">—</p>
+      </div>
+    </div> -->
+
+    <!-- ── 1. CAMERA FEED ──────────────────────────────────── -->
+    <div class="ext-section">
+      <p class="ext-label">Camera Feed</p>
+      <div class="ext-feed-row">
+        <select id="modal-feed-select" class="ext-feed-select">
+          <option value="">— select camera —</option>
+        </select>
+        <button class="btn-secondary small" id="modal-link-cam-btn">Link</button>
+      </div>
+      <p id="modal-cam-status" class="ext-cam-status"></p>
+      <div id="modal-video-box" class="ext-video-box">
+        <img id="modal-live-img" class="ext-live-img"/>
+        <div id="modal-video-placeholder" class="ext-video-placeholder">
+          <span style="font-size:32px;opacity:0.25">📹</span>
+          <span>No feed selected</span>
+        </div>
+        <span id="modal-live-badge" class="ext-live-badge">● LIVE</span>
+      </div>
+    </div>
+
+
+       <!-- Student info (roll call mode) -->
+
+    <!-- ABIDUR -- MOD HERE -->
+    <div id="modal-student-info" class="modal-student-info hidden">
+      <div class="student-photo-wrap" style="visibility:hidden;pointer-events:none;position:absolute">
+        <img id="modal-photo" src="" alt="Student photo" class="student-photo"/>
+        <span class="photo-placeholder hidden" id="modal-photo-placeholder">No photo</span>
+      </div>
+      <div class="student-fields">
+        <div class="student-field">
+          <label class="field-label">Name</label>
+          <input id="modal-name" type="text" placeholder="Student name"/>
+        </div>
+        <div class="student-field">
+          <label class="field-label">ID</label>
+          <input id="modal-student-id" type="text" placeholder="Student ID"/>
+        </div>
+        <button class="btn-secondary small" id="modal-save-student">Save</button>
+      </div>
+    </div>
+
+    <!-- Fixed mode student info (read only) -->
+    <div id="modal-fixed-info" class="modal-student-info hidden" style="visibility:hidden;pointer-events:none;position:absolute">
+      <div class="student-photo-wrap">
+        <img id="modal-fixed-photo" src="" alt="Student photo" class="student-photo"/>
+      </div>
+      <div class="student-fields">
+        <p class="fixed-name" id="modal-fixed-name">—</p>
+        <p class="fixed-id"   id="modal-fixed-id">—</p>
+        <div class="video-feed-placeholder" id="modal-video-feed">
+          <span>📹 Video feed coming soon</span>
+        </div>
+      </div>
+    </div>
+    <!-- ── 2. STUDENT SEARCH + AUTOFILL ───────────────────── -->
+    <div class="ext-section">
+      <p class="ext-label">Search students</p>
+
+      <!-- Search input + dropdown -->
+      <div class="student-search-wrap">
+        <input id="student-search" class="student-search-input"
+          type="text" placeholder="Type name or ID…" autocomplete="off"/>
+        <div id="student-dropdown" class="student-dropdown"></div>
+      </div>
+
+      <!-- Autofill fields — shown once a student is selected from dropdown -->
+      <div id="selected-panel" class="ext-selected-panel" style="visibility:hidden;pointer-events:none;position:absolute">
+        <div class="ext-autofill-fields">
+          <div class="ext-autofill-field">
+            <label class="ext-autofill-label">Name</label>
+            <input id="modal-name" type="text" placeholder="Student name" class="ext-autofill-input"/>
+          </div>
+          <div class="ext-autofill-field">
+            <label class="ext-autofill-label">Student ID</label>
+            <input id="modal-student-id" type="text" placeholder="Student ID" class="ext-autofill-input"/>
+          </div>
+        </div>
+        Extra info row: course/section, email, unit
+        <p id="sel-meta" class="ext-sel-meta"></p>
+        <!-- Hidden spans read by showSelectedPanel() -->
+        <span id="sel-name" style="display:none"></span>
+        <span id="sel-id"   style="display:none"></span>
+        <div style="display:flex;gap:6px;margin-top:10px">
+          <button class="btn-secondary small" id="assign-student-btn">✓ Assign</button>
+          <button class="btn-ghost small"     id="clear-student-btn">✕ Clear</button>
+        </div>
+      </div>
+
+      <!-- Already-assigned student (shown when seat already linked) -->
+      <div id="assigned-student-panel"  style="visibility:hidden;pointer-events:none;position:absolute">
+        <div class="ext-assigned-card">
+          <div>
+            <div class="selected-student-name" id="assigned-name">—</div>
+            <div class="selected-student-id"   id="assigned-id">—</div>
+          </div>
+          <button class="btn-ghost small" id="remove-student-btn">✕ Remove</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── 3. UNIT ACTIONS ─────────────────────────────────── -->
+    <div class="ext-section">
+      <p class="ext-label">Unit actions</p>
+      <div class="modal-body">
+        <div class="modal-row">
+          <div class="modal-row-label">
+            <strong>Warn</strong><span>Shows WARNING on unit</span>
+          </div>
+          <button class="btn-amber" id="m-warn-btn">⚠ Warn</button>
+        </div>
+        <div class="modal-row">
+          <div class="modal-row-label">
+            <strong>Disable</strong><span>0 s = indefinite</span>
+          </div>
+          <div class="modal-row-right">
+            <input id="m-punish" type="number" min="0" placeholder="Penalty (s)"/>
+            <button class="btn-red" id="m-disable-btn">Disable</button>
+          </div>
+        </div>
+        <div class="modal-row">
+          <div class="modal-row-label">
+            <strong>Enable</strong><span>Re-enable immediately</span>
+          </div>
+          <button class="btn-green" id="m-enable-btn">✓ Enable</button>
+        </div>
+        <div class="modal-row">
+          <div class="modal-row-label">
+            <strong>Deduct time</strong><span>Reduces unit timer</span>
+          </div>
+          <div class="modal-row-right">
+            <input id="m-deduct" type="number" min="1" placeholder="Seconds"/>
+            <button class="btn-red" id="m-deduct-btn">Deduct</button>
+          </div>
+        </div>
+        <div class="modal-row">
+          <div class="modal-row-label">
+            <strong>Beep</strong><span>Flash BEEP to identify unit</span>
+          </div>
+          <button class="btn-secondary" id="m-beep-btn">📣 Beep</button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /.modal -->
+</div><!-- /#modal-bg -->
+
+<script src="../scripts/theme-controller.js"></script>
+<script src="../scripts/component-loader.js"></script>
+<style>
+/* ── Modal width — give it more room for the taller feed ──── */
+.modal { width: min(520px, 96vw); }
+
+/* ── Section block ─────────────────────────────────────────── */
+.ext-section {
+  margin-bottom: 18px;
+}
+.ext-section:last-child { margin-bottom: 0; }
+.ext-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+/* ── Camera feed ───────────────────────────────────────────── */
+.ext-feed-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.ext-feed-select {
+  flex: 1;
+  padding: 7px 10px;
+  font-size: 12px;
+  font-family: var(--mono);
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  outline: none;
+  cursor: pointer;
+}
+.ext-feed-select:focus { border-color: var(--accent); }
+.ext-cam-status {
+  font-size: 11px;
+  font-family: var(--mono);
+  color: var(--muted);
+  min-height: 14px;
+  margin-bottom: 6px;
+}
+.ext-video-box {
+  width: 100%;
+  height: 320px;
+  background: #0b0f15;
+  border-radius: 8px;
+  overflow: hidden;
+  position: relative;
+  border: 1px solid var(--border);
+}
+.ext-live-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: none;
+}
+.ext-video-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #4B5563;
+  font-size: 12px;
+}
+.ext-live-badge {
+  display: none;
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  background: #10B981;
+  color: #fff;
+  border-radius: 4px;
+  padding: 2px 8px;
+}
+
+/* ── Student search + dropdown ─────────────────────────────── */
+.student-search-wrap {
+  position: relative;
+  width: 100%;
+}
+.student-search-input {
+  width: 100%;
+  padding: 8px 11px;
+  font-size: 13px;
+  font-family: var(--font);
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  outline: none;
+  box-sizing: border-box;
+}
+.student-search-input:focus { border-color: var(--accent); }
+
+/* The dropdown list */
+.student-dropdown {
+  display: none;                  /* hidden by default */
+  position: absolute;
+  top: calc(100% + 3px);
+  left: 0;
+  right: 0;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+  z-index: 9999;
+  max-height: 220px;
+  overflow-y: auto;
+  padding: 4px;
+}
+.student-dropdown.open { display: block; }  /* penapp-ext.js adds .open */
+
+.student-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  gap: 10px;
+  transition: background 0.1s;
+}
+.student-option:hover { background: var(--bg3); }
+.student-option-name {
+  font-size: 13px;
+  color: var(--text);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.student-option-id {
+  font-size: 11px;
+  font-family: var(--mono);
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+/* ── Autofill fields (shown after selecting from dropdown) ─── */
+.ext-selected-panel {
+  margin-top: 10px;
+  padding: 12px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.ext-autofill-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+.ext-autofill-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ext-autofill-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.ext-autofill-input {
+  width: 100%;
+  padding: 6px 9px;
+  font-size: 13px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-family: var(--font);
+  outline: none;
+  box-sizing: border-box;
+}
+.ext-autofill-input:focus { border-color: var(--accent); }
+.ext-sel-meta {
+  font-size: 11px;
+  color: var(--muted);
+  font-family: var(--mono);
+  min-height: 14px;
+}
+
+/* ── Already-assigned student card ─────────────────────────── */
+.ext-assigned-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  gap: 10px;
+}
+.selected-student-name { font-size: 13px; font-weight: 600; color: var(--text); }
+.selected-student-id   { font-size: 11px; font-family: var(--mono); color: var(--muted); margin-top: 2px; }
+</style>
+<script type="module" src="../pages/app.js"></script>
+<script type="module" src="../pages/penapp-ext.js"></script>
+</body>
+</html>

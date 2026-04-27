@@ -1,0 +1,68 @@
+inksentinel/
+├── backend/
+│   ├── database/
+│   ├── node_modules/
+│   ├── public/
+│   │   ├── components/
+│   │   │   ├── also works sidebar.html
+│   │   │   ├── footer.html
+│   │   │   ├── header.html
+│   │   │   └── sidebar.html
+│   │   ├── css/
+│   │   ├── js/
+│   │   ├── pages/
+│   │   │   ├── redundant/
+│   │   │   ├── alert-monitor-page.html
+│   │   │   ├── allsessions.html
+│   │   │   ├── app.js
+│   │   │   ├── audit-log-page.html
+│   │   │   ├── camera.html
+│   │   │   ├── esp32_central_v5.ino
+│   │   │   ├── exam-setup-page.html
+│   │   │   ├── index.html
+│   │   │   ├── login.html
+│   │   │   ├── penapp-ext.js
+│   │   │   ├── session.html
+│   │   │   ├── settings-page.html
+│   │   │   ├── stmng.js
+│   │   │   ├── student-list-page.html
+│   │   │   ├── style.css
+│   │   │   └── wemos_examinee_v6.ino
+│   │   ├── redundant/
+│   │   ├── scripts/
+│   │   │   ├── component-loader.js
+│   │   │   └── theme-controller.js
+│   │   └── recordings/
+│   ├── src/
+│   │   ├── middleware/
+│   │   │   ├── auth from middelware folder.js
+│   │   │   └── auth.js
+│   │   ├── pages/
+│   │   │   └── router.js
+│   │   └── routes/
+│   │       ├── auth from routes folder.js
+│   │       ├── auth.js
+│   │       ├── camera-links.js
+│   │       ├── feeds.js
+│   │       ├── history.js
+│   │       ├── incidents.js
+│   │       ├── penlog.js
+│   │       ├── semi working feeds.js
+│   │       ├── sessions.js
+│   │       ├── settings.js
+│   │       ├── signals.js
+│   │       ├── stats.js
+│   │       ├── students.js
+│   │       └── xpenstudents.js
+│   ├── db.js
+│   ├── index.js
+│   ├── inferenceClient.js
+│   ├── recorder.js
+│   └── wsHandler.js
+├── .env
+├── .gitignore
+├── .gitkeep
+├── env without creds.txt
+├── package-lock.json
+├── package.json
+└── README_b.md

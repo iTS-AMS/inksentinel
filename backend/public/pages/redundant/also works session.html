@@ -1,0 +1,416 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+  <title>Session | ExamNexus</title>
+
+  <!-- Theme runs before Tailwind / first paint — no flash -->
+  <script src="../scripts/theme-controller.js"></script>
+
+  <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            primary:            '#FF5722',
+            secondary:          '#10B981',
+            danger:             '#EF4444',
+            warning:            '#F59E0B',
+            'background-light': '#F9FAFB',
+            'background-dark':  '#111827',
+            'surface-light':    '#FFFFFF',
+            'surface-dark':     '#1F2937',
+            'text-light':       '#1F2937',
+            'text-dark':        '#F3F4F6',
+            'border-light':     '#E5E7EB',
+            'border-dark':      '#374151',
+            'subtext-light':    '#64748B',
+            'subtext-dark':     '#94A3B8',
+          },
+          fontFamily: { sans: ['Inter', 'sans-serif'] },
+        },
+      },
+    };
+  </script>
+
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 3px; }
+    .dark ::-webkit-scrollbar-thumb { background: #475569; }
+    @keyframes pulse-dot  { 0%,100%{opacity:1} 50%{opacity:.4} }
+    @keyframes pulse-ring { 0%,100%{opacity:1} 50%{opacity:.4} }
+    .pulse-dot { animation: pulse-dot 1.5s infinite; }
+  </style>
+</head>
+
+<body class="bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark antialiased h-screen flex overflow-hidden transition-colors duration-200">
+
+  <!-- Sidebar injected by component-loader -->
+  <aside id="sidebar-placeholder"
+    class="w-64 flex-shrink-0 bg-surface-light dark:bg-surface-dark border-r border-border-light dark:border-border-dark h-full">
+  </aside>
+
+  <!-- Main -->
+  <main class="flex-1 flex flex-col h-full overflow-hidden">
+
+    <!-- Top bar -->
+    <header class="bg-background-light dark:bg-background-dark border-b border-border-light dark:border-border-dark px-8 py-4 flex items-center justify-between shrink-0 transition-colors duration-200">
+      <div class="flex items-center gap-3">
+        <!-- Back button -->
+        <button onclick="history.back()"
+          class="p-2 rounded-lg text-subtext-light dark:text-subtext-dark hover:text-text-light dark:hover:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+          <span class="material-icons-outlined text-xl">arrow_back</span>
+        </button>
+        <div>
+          <div class="flex items-center gap-2.5 flex-wrap">
+            <h1 id="session-title" class="text-xl font-bold">—</h1>
+            <!-- Status badge — toggled by JS -->
+            <span id="status-badge"
+              class="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-bold uppercase tracking-wide
+                     bg-gray-100 dark:bg-gray-700 text-subtext-light dark:text-subtext-dark border border-border-light dark:border-border-dark">
+              Loading
+            </span>
+          </div>
+          <p id="session-meta-bar" class="text-sm text-subtext-light dark:text-subtext-dark mt-0.5">—</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <!-- End Session (shown for active sessions only) -->
+        <button id="end-btn" onclick="endSession()" style="display:none"
+          class="bg-danger hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-1.5 transition-colors shadow-sm">
+          <span class="material-icons-outlined text-base">stop</span>
+          End Session
+        </button>
+        <!-- Audit Log -->
+        <!-- <a id="audit-log-link" href="#"
+          class="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-border-light dark:border-border-dark text-sm font-medium text-text-light dark:text-text-dark hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+          <span class="material-icons-outlined text-base">receipt_long</span>
+          Audit Log
+        </a> -->
+      </div>
+    </header>
+
+    <!-- Scrollable content -->
+    <div class="flex-1 overflow-y-auto px-8 py-6">
+
+      <!-- No session warning -->
+      <div id="no-session-warning" class="hidden mb-6 flex items-center gap-2 px-4 py-3 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-sm font-medium">
+        <span class="material-icons-outlined text-base">warning</span>
+        No active session. &nbsp;
+        <a href="/allsessions" class="underline font-semibold">Start a new session →</a>
+      </div>
+
+      <!-- Stat cards -->
+      <div class="grid grid-cols-4 gap-4 mb-6">
+        <div class="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark p-6 shadow-sm">
+          <p class="text-xs font-semibold text-subtext-light dark:text-subtext-dark uppercase tracking-wider mb-2">Seats Connected</p>
+          <p id="kpi-seats" class="text-4xl font-bold">0</p>
+        </div>
+        <div class="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark p-6 shadow-sm">
+          <p class="text-xs font-semibold text-subtext-light dark:text-subtext-dark uppercase tracking-wider mb-2">Total Detections</p>
+          <p id="kpi-alerts" class="text-4xl font-bold text-warning">0</p>
+        </div>
+        <div class="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark p-6 shadow-sm">
+          <p class="text-xs font-semibold text-subtext-light dark:text-subtext-dark uppercase tracking-wider mb-2">Duration</p>
+          <p id="kpi-duration" class="text-3xl font-bold">—</p>
+        </div>
+        <div class="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark p-6 shadow-sm">
+          <p class="text-xs font-semibold text-subtext-light dark:text-subtext-dark uppercase tracking-wider mb-2">Actions Taken</p>
+          <p id="kpi-actions" class="text-4xl font-bold text-secondary">0</p>
+        </div>
+      </div>
+
+      <!-- Attendance + Detection Log -->
+      <div class="grid grid-cols-1 gap-4 mb-4">
+
+        <!-- Attendance Register -->
+        <div class="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark p-6 shadow-sm">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-sm font-semibold flex items-center gap-2">
+              <span class="material-icons-outlined text-base text-subtext-light dark:text-subtext-dark">group</span>
+              Attendance Register
+            </h3>
+            <span id="attendance-count" class="text-xs text-subtext-light dark:text-subtext-dark">0 seats</span>
+          </div>
+          <table class="w-full border-collapse">
+            <thead>
+              <tr class="border-b border-border-light dark:border-border-dark">
+                <th class="pb-2 text-left text-xs font-semibold text-subtext-light dark:text-subtext-dark uppercase tracking-wider">Seat / Name</th>
+                <th class="pb-2 text-left text-xs font-semibold text-subtext-light dark:text-subtext-dark uppercase tracking-wider">Status</th>
+                <th class="pb-2 text-left text-xs font-semibold text-subtext-light dark:text-subtext-dark uppercase tracking-wider">Alerts</th>
+              </tr>
+            </thead>
+            <tbody id="attendance-tbody">
+              <tr>
+                <td colspan="3" class="pt-8 pb-4 text-center text-sm text-subtext-light dark:text-subtext-dark">Loading…</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Detection Log -->
+        <!-- <div class="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark p-6 shadow-sm">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-sm font-semibold flex items-center gap-2">
+              <span class="material-icons-outlined text-base text-warning">warning_amber</span>
+              Detection Log
+            </h3>
+            <a id="view-all-detections" href="#" class="text-xs font-medium text-primary hover:underline">View all →</a>
+          </div>
+          <div id="detection-log">
+            <p class="text-sm text-subtext-light dark:text-subtext-dark text-center py-6">No detections for this session</p>
+          </div>
+        </div> -->
+
+      </div>
+
+      <!-- Session Details -->
+      <div class="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark p-6 shadow-sm">
+        <div class="flex items-center gap-2 mb-5">
+          <span class="material-icons-outlined text-base text-subtext-light dark:text-subtext-dark">info</span>
+          <h3 class="text-sm font-semibold">Session Details</h3>
+        </div>
+        <div class="grid grid-cols-4 gap-6">
+          <div>
+            <p class="text-xs font-semibold text-subtext-light dark:text-subtext-dark uppercase tracking-wider mb-1">Created</p>
+            <p id="detail-created" class="text-sm font-medium">—</p>
+          </div>
+          <div>
+            <p class="text-xs font-semibold text-subtext-light dark:text-subtext-dark uppercase tracking-wider mb-1">Ended</p>
+            <p id="detail-ended" class="text-sm font-medium">—</p>
+          </div>
+          <div>
+            <p class="text-xs font-semibold text-subtext-light dark:text-subtext-dark uppercase tracking-wider mb-1">Room</p>
+            <p id="detail-room" class="text-sm font-medium">—</p>
+          </div>
+          <div>
+            <p class="text-xs font-semibold text-subtext-light dark:text-subtext-dark uppercase tracking-wider mb-1">Session ID</p>
+            <p id="detail-id" class="text-sm font-medium">—</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+<script src="../scripts/component-loader.js"></script>
+<script>
+  // ── State ────────────────────────────────────────────────
+  const urlParams    = new URLSearchParams(window.location.search);
+  let   currentSid   = urlParams.get('id') ? parseInt(urlParams.get('id')) : null;
+  let   isHistorical = false;
+  let   refreshTimer = null;
+
+  // ── Helpers ───────────────────────────────────────────────
+  function fmtDateTime(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleString('en-US', {
+      month: 'numeric', day: 'numeric', year: 'numeric',
+      hour: 'numeric', minute: '2-digit',
+    });
+  }
+  function calcDuration(startIso, endIso) {
+    const ms = (endIso ? new Date(endIso) : new Date()) - new Date(startIso);
+    if (ms < 0) return '—';
+    const h = Math.floor(ms / 3600000);
+    const m = Math.floor((ms % 3600000) / 60000);
+    return h ? `${h}h ${m}m` : `${m}m`;
+  }
+  function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  function escAttr(s) { return String(s).replace(/"/g,'&quot;'); }
+
+  // ── Load stats ────────────────────────────────────────────
+  async function loadStats() {
+    const url = currentSid ? `/api/stats?session_id=${currentSid}` : '/api/stats';
+    try {
+      const res  = await fetch(url, { credentials: 'include' });
+      if (res.status === 401) { window.location.href = '/login'; return; }
+      if (!res.ok) throw new Error('Failed');
+      const data = await res.json();
+
+      if (!data.sessionInfo) {
+        document.getElementById('no-session-warning').classList.remove('hidden');
+        document.getElementById('session-title').textContent = 'No Session';
+        _setBadge(false, true);
+        document.getElementById('end-btn').style.display = 'none';
+        return;
+      }
+
+      const s    = data.sessionInfo;
+      currentSid = data.sessionId;
+      isHistorical = !!s.ended_at;
+
+      // Title + badge
+      document.getElementById('session-title').textContent = s.name;
+      _setBadge(!isHistorical);
+
+      // Meta bar
+      const parts = [s.course_name, s.instructor_name, s.time_block].filter(Boolean);
+      document.getElementById('session-meta-bar').textContent = parts.join(' · ') || '—';
+
+      // End button
+      document.getElementById('end-btn').style.display = isHistorical ? 'none' : 'flex';
+
+      // Audit log
+      document.getElementById('audit-log-link').href = `/history?sessionId=${currentSid}`;
+
+      // KPIs
+      document.getElementById('kpi-seats').textContent    = data.liveFeeds    ?? 0;
+      document.getElementById('kpi-alerts').textContent   = data.totalAlerts  ?? 0;
+      document.getElementById('kpi-actions').textContent  = 0;
+      document.getElementById('kpi-duration').textContent = calcDuration(s.created_at, s.ended_at);
+
+      // Details
+      document.getElementById('detail-created').textContent = fmtDateTime(s.created_at);
+      document.getElementById('detail-ended').textContent   = s.ended_at ? fmtDateTime(s.ended_at) : '—';
+      document.getElementById('detail-room').textContent    = s.room || '—';
+      document.getElementById('detail-id').textContent      = `#${currentSid}`;
+
+      renderDetectionLog(data);
+      if (currentSid) loadAttendance(currentSid);
+
+    } catch (err) { console.error('[Session] Stats error:', err); }
+  }
+
+  // ── Status badge ──────────────────────────────────────────
+  function _setBadge(active, empty = false) {
+    const badge = document.getElementById('status-badge');
+    if (empty) {
+      badge.className = 'inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-bold uppercase tracking-wide bg-gray-100 dark:bg-gray-700 text-subtext-light dark:text-subtext-dark border border-border-light dark:border-border-dark';
+      badge.innerHTML = 'None';
+      return;
+    }
+    if (active) {
+      badge.className = 'inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-bold uppercase tracking-wide bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800';
+      badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-green-500 pulse-dot"></span>Active';
+    } else {
+      badge.className = 'inline-flex items-center px-3 py-0.5 rounded-full text-xs font-bold uppercase tracking-wide bg-gray-100 dark:bg-gray-700 text-subtext-light dark:text-subtext-dark border border-border-light dark:border-border-dark';
+      badge.innerHTML = 'Completed';
+    }
+  }
+
+  // ── Detection log ─────────────────────────────────────────
+  function renderDetectionLog(data) {
+    const logEl   = document.getElementById('detection-log');
+    const classes = Object.entries(data.byClass || {});
+    if (!classes.length) {
+      logEl.innerHTML = '<p class="text-sm text-subtext-light dark:text-subtext-dark text-center py-6">No detections for this session</p>';
+      return;
+    }
+    logEl.innerHTML = classes.slice(0, 6).map(([cls, count]) => `
+      <div class="flex items-start gap-3 py-2.5 border-b border-border-light dark:border-border-dark last:border-b-0">
+        <div class="w-7 h-7 rounded-md bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center flex-shrink-0">
+          <span class="material-icons-outlined text-base text-warning">person_search</span>
+        </div>
+        <div>
+          <p class="text-sm font-medium">${escHtml(cls)}</p>
+          <p class="text-xs text-subtext-light dark:text-subtext-dark mt-0.5">${count} detection${count!==1?'s':''} this session</p>
+        </div>
+      </div>`).join('');
+  }
+
+  // ── Attendance ────────────────────────────────────────────
+  async function loadAttendance(sessionId) {
+    try {
+      const res  = await fetch(`/api/sessions/${sessionId}/attendance`, { credentials: 'include' });
+      if (!res.ok) throw new Error('Failed');
+      const data = await res.json();
+      renderAttendance(data.attendance || []);
+    } catch (_) {
+      document.getElementById('attendance-tbody').innerHTML =
+        '<tr><td colspan="3" class="pt-8 pb-4 text-center text-sm text-subtext-light dark:text-subtext-dark">Failed to load attendance</td></tr>';
+    }
+  }
+
+  function renderAttendance(rows) {
+    const tbody = document.getElementById('attendance-tbody');
+    document.getElementById('attendance-count').textContent =
+      `${rows.length} seat${rows.length !== 1 ? 's' : ''}`;
+
+    if (!rows.length) {
+      tbody.innerHTML =
+        '<tr><td colspan="3" class="pt-8 pb-4 text-center text-sm text-subtext-light dark:text-subtext-dark">No attendance recorded</td></tr>';
+      return;
+    }
+    tbody.innerHTML = rows.map(row => {
+      const alerts = Number(row.alert_count || 0);
+      const alertCls = alerts > 0 ? 'text-warning font-semibold' : 'text-gray-300 dark:text-gray-600';
+      return `
+        <tr class="border-b border-border-light dark:border-border-dark last:border-b-0">
+          <td class="py-2.5 pr-3">
+            <p class="text-sm font-semibold">${escHtml(row.feed_label)}</p>
+            <input type="text"
+              value="${escAttr(row.candidate_name||'')}"
+              placeholder="Add name…"
+              data-sfid="${row.id}"
+              onblur="saveName(this)"
+              onkeydown="if(event.key==='Enter')this.blur()"
+              class="mt-0.5 w-40 bg-transparent border-0 border-b border-border-light dark:border-border-dark text-xs text-subtext-light dark:text-subtext-dark placeholder-gray-300 dark:placeholder-gray-600 focus:outline-none focus:border-primary transition-colors pb-0.5" />
+          </td>
+          <td class="py-2.5 pr-3">
+            <span class="inline-flex items-center gap-1.5 text-xs font-medium text-subtext-light dark:text-subtext-dark">
+              <span class="w-1.5 h-1.5 rounded-full bg-gray-300 dark:bg-gray-600"></span>Offline
+            </span>
+          </td>
+          <td class="py-2.5 text-sm ${alertCls}">${alerts > 0 ? alerts : '—'}</td>
+        </tr>`;
+    }).join('');
+  }
+
+  async function saveName(input) {
+    try {
+      await fetch(`/api/sessions/${currentSid}/attendance/${input.dataset.sfid}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ candidate_name: input.value.trim() || null }),
+      });
+    } catch(_) {}
+  }
+
+  // ── End session ───────────────────────────────────────────
+  async function endSession() {
+    if (!currentSid) return;
+    if (!confirm('End this session? Cameras will need to reconnect for the next one.')) return;
+    try {
+      const res = await fetch(`/api/sessions/${currentSid}/end`, { method: 'PUT', credentials: 'include' });
+      if (res.ok) {
+        isHistorical = true;
+        document.getElementById('end-btn').style.display = 'none';
+        stopRefresh();
+        loadStats();
+      } else {
+        const d = await res.json();
+        alert('Error: ' + (d.error || 'Unknown error'));
+      }
+    } catch(_) { alert('Network error.'); }
+  }
+
+  // ── Auto-refresh (active sessions only) ───────────────────
+  function startRefresh() {
+    stopRefresh();
+    refreshTimer = setInterval(() => { if (!isHistorical) loadStats(); }, 10000);
+  }
+  function stopRefresh() {
+    if (refreshTimer) { clearInterval(refreshTimer); refreshTimer = null; }
+  }
+
+  // ── Init ──────────────────────────────────────────────────
+  loadStats();
+  startRefresh();
+</script>
+</body>
+</html>

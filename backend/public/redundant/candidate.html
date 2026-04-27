@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Proctor — Candidate</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    /* ── Real-time exam timer ────────────────────────────────── */
+    /* Shown only when a timer command was confirmed delivered    */
+    #exam-timer-card {
+      display: none; /* shown by JS when timer is confirmed */
+    }
+    .exam-timer-display {
+      font-family: var(--fm);
+      font-size: 3rem;
+      font-weight: 700;
+      text-align: center;
+      letter-spacing: 0.06em;
+      color: var(--green);
+      padding: 12px 0 8px;
+      transition: color 0.3s;
+    }
+    .exam-timer-display.warn  { color: var(--amber); }  /* < 5 min */
+    .exam-timer-display.ended { color: var(--red);   }  /* 0:00    */
+
+    .timer-state-row {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    /* ── Signal log delivery badges ─────────────────────────── */
+    .sig-badge {
+      font-size: 9px;
+      padding: 1px 6px;
+      border-radius: 3px;
+      font-family: var(--fm);
+      letter-spacing: 0.06em;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+    .sig-badge.delivered { background: rgba(34,197,94,0.15);  color: var(--green); }
+    .sig-badge.logged    { background: rgba(245,158,11,0.15); color: var(--amber); }
+    .sig-badge.error     { background: var(--rdim);           color: var(--red);   }
+  </style>
+</head>
+<body>
+<div class="layout">
+  <div id="sidebar" style="min-width:200px;width:200px;flex-shrink:0"></div>
+
+  <main class="main">
+    <div class="breadcrumb">
+      <a href="/dashboard">← Dashboard</a>
+      <span>/</span>
+      <span id="crumb-label">Loading...</span>
+    </div>
+
+    <div class="profile-grid">
+
+      <!-- ── Left column: video + logs ─────────────────────── -->
+      <div>
+        <div class="video-large" id="video-wrap">
+          <div class="feed-placeholder">
+            <div class="feed-icon">◈</div>
+            <div class="feed-status-text" id="video-status">LOADING...</div>
+          </div>
+          <div class="video-top-bar">
+            <div class="feed-badge live" id="live-badge">
+              <span class="feed-dot"></span> LIVE
+            </div>
+            <div id="video-label" style="
+              background:rgba(7,8,13,0.7);backdrop-filter:blur(4px);
+              padding:4px 10px;border-radius:4px;
+              font-family:var(--fd);font-weight:700;
+              font-size:14px;letter-spacing:0.08em">—
+            </div>
+          </div>
+          <div class="alert-banner" id="alert-banner" style="display:none">
+            ⚠ SUSPICIOUS ACTIVITY DETECTED
+          </div>
+        </div>
+
+        <!-- Detection log -->
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-title">Detection Log</div>
+          <div id="detection-log" style="max-height:220px;overflow-y:auto">
+            <div style="color:var(--t3);font-size:12px">Loading...</div>
+          </div>
+        </div>
+
+        <!-- Per-unit delivery status — populated by signal_ack WS messages.
+             Hidden until first signal is sent.
+             ESP32 column: updated on serial write confirmation.
+             Wemos column: updated when ESP32 firmware echoes back JSON ack. -->
+        <div class="card" id="unit-status-card" style="display:none;margin-bottom:16px">
+          <div class="card-title">Unit Delivery Status</div>
+          <div id="unit-status-list" style="display:flex;flex-direction:column;gap:6px"></div>
+        </div>
+
+        <!-- Signal history -->
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;
+            align-items:center;margin-bottom:14px">
+            <div class="card-title" style="margin-bottom:0">Signal History</div>
+            <button class="btn btn-ghost"
+              style="font-size:10px;padding:4px 10px"
+              onclick="clearSignalLog()">Clear</button>
+          </div>
+          <div id="signal-log" style="max-height:200px;overflow-y:auto">
+            <div style="color:var(--t3);font-size:12px">No signals sent yet</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Right column: info + controls ─────────────────── -->
+      <div style="display:flex;flex-direction:column;gap:16px">
+
+        <!-- Feed info -->
+        <div class="card">
+          <div class="card-title">Feed Info</div>
+          <div id="info-rows"></div>
+        </div>
+
+        <!-- ── Real-time exam timer ──────────────────────────
+             Shown only when a timer command is confirmed
+             delivered to ESP32 (HTTP 200 response).
+             State: stopped → running → paused → ended       -->
+        <div class="card" id="exam-timer-card">
+          <div class="card-title">Exam Timer</div>
+          <div class="exam-timer-display" id="timer-display">--:--</div>
+          <div class="timer-state-row">
+            <span id="timer-state-badge"
+              style="font-size:10px;color:var(--t3);
+                     font-family:var(--fm);letter-spacing:0.06em">
+              WAITING
+            </span>
+          </div>
+          <p style="font-size:10px;color:var(--t3);text-align:center;
+            margin-bottom:4px">
+            Updates only when ESP32 confirms delivery (↑ green badge)
+          </p>
+        </div>
+
+        <!-- Exam controls -->
+        <div class="card">
+          <div class="card-title">Exam Controls</div>
+          <p style="font-size:11px;color:var(--t3);margin-bottom:14px">
+            Global commands sent to all pen units.
+          </p>
+
+          <div class="signal-group">
+            <div class="signal-label">Timer</div>
+            <div style="display:flex;gap:6px;margin-bottom:6px">
+              <input class="input" type="number" id="duration-input"
+                placeholder="Minutes" min="1" style="width:120px">
+              <button class="btn btn-ghost" onclick="sendTimer()">Set Timer</button>
+            </div>
+          </div>
+
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px">
+            <button class="btn btn-green"  onclick="sendCmd('start')">▶ Start</button>
+            <button class="btn btn-ghost"  onclick="sendCmd('pause')">⏸ Pause</button>
+            <button class="btn btn-danger" onclick="sendCmd('end')">⏹ End</button>
+            <button class="btn btn-ghost"  onclick="sendCmd('reset')">↺ Reset</button>
+          </div>
+
+          <hr class="divider">
+
+          <div class="signal-group">
+            <div class="signal-label">Unit Actions</div>
+            <p style="font-size:11px;color:var(--t3);margin-bottom:10px">
+              Target a specific pen unit by ID.
+            </p>
+
+            <div style="display:flex;gap:6px;margin-bottom:10px">
+              <input class="input" type="number" id="unit-id"
+                placeholder="Unit ID" min="1" style="width:100px">
+            </div>
+
+            <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">
+              <button class="btn btn-warn"  onclick="sendUnit('warn')">⚠ Warn</button>
+              <button class="btn btn-green" onclick="sendUnit('enable')">✓ Enable</button>
+            </div>
+
+            <div class="signal-group">
+              <div class="signal-label">Disable</div>
+              <div style="display:flex;gap:6px;margin-bottom:4px">
+                <input class="input" type="number" id="punish-input"
+                  placeholder="Penalty (s) — optional" min="0">
+                <button class="btn btn-danger" onclick="sendDisable()">Disable</button>
+              </div>
+            </div>
+
+            <div class="signal-group">
+              <div class="signal-label">Deduct Time</div>
+              <div style="display:flex;gap:6px">
+                <input class="input" type="number" id="deduct-input"
+                  placeholder="Seconds to deduct" min="1">
+                <button class="btn btn-danger" onclick="sendDeduct()">Deduct</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="/js/nav.js"></script>
+<script>
+  document.getElementById('sidebar').innerHTML = buildSidebar();
+  initSidebar();
+
+  const feedId  = window.location.pathname.split('/')[2];
+  let signalLog = [];
+
+  // ── Feed data ─────────────────────────────────────────────
+
+  async function loadFeed() {
+    const data = await api(`/api/feeds/${feedId}`);
+    if (!data) return;
+
+    document.getElementById('crumb-label').textContent = data.label;
+    document.getElementById('video-label').textContent = data.label;
+    document.getElementById('video-status').textContent =
+      data.connected ? 'LIVE FEED' : 'CAMERA OFFLINE';
+
+    const badge = document.getElementById('live-badge');
+    if (data.connected) {
+      badge.className = 'feed-badge live';
+      badge.innerHTML = '<span class="feed-dot"></span> LIVE';
+    } else {
+      badge.className = 'feed-badge offline';
+      badge.innerHTML  = 'OFFLINE';
+    }
+
+    const hasAlert = data.detections && data.detections.length > 0;
+    document.getElementById('video-wrap').className =
+      `video-large ${hasAlert ? 'alert' : ''}`;
+    document.getElementById('alert-banner').style.display =
+      hasAlert ? 'block' : 'none';
+
+    document.getElementById('info-rows').innerHTML = [
+      { label: 'Feed ID',     value: `#${data.id}` },
+      { label: 'Label',       value: data.label },
+      { label: 'Status',      value: data.connected ? 'Connected' : 'Offline',
+        color: data.connected ? 'var(--green)' : 'var(--red)' },
+      { label: 'Total Flags', value: data.detections?.length || 0,
+        color: data.detections?.length > 0 ? 'var(--amber)' : 'var(--t1)' },
+    ].map(r => `
+      <div class="info-row">
+        <span class="info-label">${r.label}</span>
+        <span style="color:${r.color||'var(--t1)'};font-weight:500">
+          ${r.value}
+        </span>
+      </div>`).join('');
+
+    const log = document.getElementById('detection-log');
+    if (!data.detections || data.detections.length === 0) {
+      log.innerHTML =
+        '<div style="color:var(--t3);font-size:12px">No detections</div>';
+    } else {
+      log.innerHTML = data.detections.map(d => `
+        <div style="display:flex;justify-content:space-between;
+          align-items:center;padding:6px 0;
+          border-bottom:1px solid rgba(0,212,255,0.05)">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="width:6px;height:6px;border-radius:50%;
+              background:var(--red);display:inline-block;flex-shrink:0">
+            </span>
+            <span style="font-size:11px;padding:2px 6px;background:var(--rdim);
+              color:var(--red);border-radius:2px;letter-spacing:0.06em">
+              ${d.class_label}
+            </span>
+            <span style="font-size:11px;color:var(--amber)">
+              ${(d.confidence*100).toFixed(0)}%
+            </span>
+          </div>
+          <span style="font-size:10px;color:var(--t3)">
+            ${new Date(d.detected_at).toLocaleTimeString()}
+          </span>
+        </div>`).join('');
+    }
+  }
+
+  // ════════════════════════════════════════════════════════════
+  //  REAL-TIME EXAM TIMER
+  //
+  //  Purely client-side — no backend needed.
+  //  Only activates when the server returns HTTP 200 for a
+  //  timer or exam-control command, meaning ESP32 confirmed
+  //  receipt. A 202 (logged, not delivered) does NOT update
+  //  the timer.
+  //
+  //  States:
+  //    stopped  — timer set, not yet started
+  //    running  — countdown ticking
+  //    paused   — frozen
+  //    ended    — reached 0:00 or End command confirmed
+  // ════════════════════════════════════════════════════════════
+
+  let timerTotal    = 0;     // total ms set by instructor
+  let timerRemain   = 0;     // ms remaining
+  let timerState    = 'stopped'; // stopped | running | paused | ended
+  let timerInterval = null;  // setInterval handle
+
+  function timerTick() {
+    if (timerState !== 'running') return;
+
+    timerRemain = Math.max(0, timerRemain - 1000);
+    renderTimer();
+
+    if (timerRemain === 0) {
+      timerState = 'ended';
+      clearInterval(timerInterval);
+      timerInterval = null;
+      renderTimer();
+    }
+  }
+
+  // Format ms → MM:SS
+  function fmtMs(ms) {
+    const totalSec = Math.ceil(ms / 1000);
+    const m = Math.floor(totalSec / 60);
+    const s = totalSec % 60;
+    return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  }
+
+  function renderTimer() {
+    const card    = document.getElementById('exam-timer-card');
+    const display = document.getElementById('timer-display');
+    const badge   = document.getElementById('timer-state-badge');
+
+    // Show card only once a timer has been confirmed
+    if (timerTotal > 0) card.style.display = 'block';
+
+    display.textContent = fmtMs(timerRemain);
+
+    // Colour shifts: green → amber under 5 min → red when ended
+    display.className = 'exam-timer-display';
+    if (timerState === 'ended' || timerRemain === 0) {
+      display.classList.add('ended');
+    } else if (timerRemain < 5 * 60 * 1000) {
+      display.classList.add('warn');
+    }
+
+    const stateMap = {
+      stopped: { label: 'SET — awaiting Start',  color: 'var(--t3)'   },
+      running: { label: '● RUNNING',              color: 'var(--green)' },
+      paused:  { label: '⏸ PAUSED',              color: 'var(--amber)' },
+      ended:   { label: '⏹ ENDED',              color: 'var(--red)'   },
+    };
+    const s = stateMap[timerState] || stateMap.stopped;
+    badge.textContent = s.label;
+    badge.style.color = s.color;
+  }
+
+  // Called when a confirmed-delivered command should update timer state
+  function applyTimerCommand(cmd, durationMs) {
+    switch (cmd) {
+
+      case 'timer':
+        // Set or reset total time — moves to stopped, waiting for Start
+        timerTotal  = durationMs;
+        timerRemain = durationMs;
+        timerState  = 'stopped';
+        if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+        renderTimer();
+        break;
+
+      case 'start':
+        // Only start if timer was set and not already running
+        if (timerTotal > 0 && timerState !== 'running' && timerState !== 'ended') {
+          timerState    = 'running';
+          timerInterval = setInterval(timerTick, 1000);
+          renderTimer();
+        }
+        break;
+
+      case 'pause':
+        if (timerState === 'running') {
+          timerState = 'paused';
+          if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+          renderTimer();
+        }
+        break;
+
+      case 'end':
+        timerState = 'ended';
+        if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+        timerRemain = 0;
+        renderTimer();
+        break;
+
+      case 'reset':
+        // Restore full duration, go back to stopped
+        timerRemain = timerTotal;
+        timerState  = 'stopped';
+        if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+        renderTimer();
+        break;
+
+      case 'deduct':
+        // Subtract time_ms from remaining (minimum 0)
+        // durationMs here is the time_ms from the signal payload
+        if (timerTotal > 0) {
+          timerRemain = Math.max(0, timerRemain - durationMs);
+          if (timerRemain === 0) {
+            timerState = 'ended';
+            if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+          }
+          renderTimer();
+        }
+        break;
+    }
+  }
+
+  // ════════════════════════════════════════════════════════════
+  //  SIGNAL SENDING
+  //
+  //  postSignal returns the parsed response and HTTP status.
+  //  HTTP 200 → ESP32 confirmed = green "Delivered ✓" badge
+  //             Also triggers timer state change if applicable.
+  //  HTTP 202 → Logged only, not delivered = amber "Logged" badge
+  //  HTTP 4xx/5xx → red "Error" badge
+  // ════════════════════════════════════════════════════════════
+
+  async function postSignal(body) {
+    let res, data;
+    try {
+      res  = await fetch('/api/signal', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify(body)
+      });
+      data = await res.json();
+    } catch (err) {
+      // Network error — Node.js unreachable
+      addSignalLog(body, 'error', 'Network error — server unreachable');
+      return;
+    }
+
+    if (res.status === 200) {
+      // ── Confirmed delivered to ESP32 ──────────────────────
+      addSignalLog(body, 'delivered');
+
+      // Update the timer display only on confirmed delivery
+      if (body.cmd === 'timer') {
+        applyTimerCommand('timer', body.duration_ms);
+      } else if (['start','pause','end','reset'].includes(body.cmd)) {
+        applyTimerCommand(body.cmd);
+      } else if (body.cmd === 'deduct') {
+        applyTimerCommand('deduct', body.time_ms);
+      }
+
+    } else if (res.status === 202) {
+      // ── Logged but not delivered (no ESP32) ───────────────
+      addSignalLog(body, 'logged', data.warning);
+
+    } else {
+      // ── Validation error or server error ──────────────────
+      addSignalLog(body, 'error', data.error || `HTTP ${res.status}`);
+    }
+  }
+
+  // ── Signal helper wrappers ────────────────────────────────
+
+  function sendCmd(cmd) { postSignal({ cmd }); }
+
+  function sendTimer() {
+    const mins = parseInt(document.getElementById('duration-input').value);
+    if (!mins || mins <= 0) {
+      addSignalLog(null, 'error', 'Enter minutes for timer');
+      return;
+    }
+    postSignal({ cmd: 'timer', duration_ms: mins * 60 * 1000 });
+  }
+
+  function getUnitId() {
+    const id = parseInt(document.getElementById('unit-id').value);
+    if (!id || id <= 0) {
+      addSignalLog(null, 'error', 'Enter a unit ID');
+      return null;
+    }
+    return id;
+  }
+
+  function sendUnit(cmd) {
+    const device_id = getUnitId();
+    if (!device_id) return;
+    postSignal({ cmd, device_id });
+  }
+
+  function sendDisable() {
+    const device_id = getUnitId();
+    if (!device_id) return;
+    const secs = parseInt(document.getElementById('punish-input').value) || 0;
+    const body = { cmd: 'disable', device_id };
+    if (secs > 0) body.punish_ms = secs * 1000;
+    postSignal(body);
+  }
+
+  function sendDeduct() {
+    const device_id = getUnitId();
+    if (!device_id) return;
+    const secs = parseInt(document.getElementById('deduct-input').value);
+    if (!secs || secs <= 0) {
+      addSignalLog(null, 'error', 'Enter seconds to deduct');
+      return;
+    }
+    postSignal({ cmd: 'deduct', device_id, time_ms: secs * 1000 });
+  }
+
+  // ── Signal log rendering ──────────────────────────────────
+  //
+  // status: 'delivered' | 'logged' | 'error'
+  // 'delivered' = green — ESP32 confirmed
+  // 'logged'    = amber — stored in DB but ESP32 not connected
+  // 'error'     = red   — validation or network failure
+
+  function addSignalLog(body, status, note) {
+    const cmdStr = body
+      ? Object.entries(body)
+          .map(([k,v]) => `${k}: ${v}`)
+          .join(', ')
+      : note || 'unknown';
+
+    signalLog.unshift({ cmdStr, status, note, time: new Date().toLocaleTimeString() });
+    renderSignalLog();
+  }
+
+  function renderSignalLog() {
+    const el = document.getElementById('signal-log');
+    if (signalLog.length === 0) {
+      el.innerHTML =
+        '<div style="color:var(--t3);font-size:12px">No signals sent yet</div>';
+      return;
+    }
+
+    const badgeLabel = {
+      delivered: 'Delivered ✓',
+      logged:    'Logged only',
+      error:     'Error',
+    };
+
+    el.innerHTML = signalLog.slice(0, 40).map((s, i) => `
+      <div style="display:flex;justify-content:space-between;
+        align-items:flex-start;padding:7px 0;
+        border-bottom:1px solid rgba(0,212,255,0.04)">
+
+        <div style="display:flex;align-items:flex-start;gap:8px;flex:1;min-width:0">
+          <span style="font-size:10px;color:var(--t3);flex-shrink:0;margin-top:2px">
+            ${signalLog.length - i}
+          </span>
+          <div style="display:flex;flex-direction:column;gap:3px;min-width:0">
+            <span style="font-size:11px;color:var(--accent);
+              word-break:break-all;letter-spacing:0.04em;font-family:var(--fm)">
+              ${s.cmdStr}
+            </span>
+            ${s.note
+              ? `<span style="font-size:10px;color:var(--t3)">${s.note}</span>`
+              : ''}
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;align-items:flex-end;
+          gap:3px;flex-shrink:0;margin-left:8px">
+          <span class="sig-badge ${s.status}">${badgeLabel[s.status]}</span>
+          <span style="font-size:10px;color:var(--t3)">${s.time}</span>
+        </div>
+
+      </div>`).join('');
+  }
+
+  function clearSignalLog() {
+    signalLog = [];
+    renderSignalLog();
+  }
+
+  // ════════════════════════════════════════════════════════════
+  //  UNIT DELIVERY STATUS PANEL
+  //
+  //  Tracks last-known delivery state per unit ID.
+  //  Updated by two WS message types:
+  //
+  //  signal_ack  — sent by signals.js immediately after serial
+  //                write attempt (confirmed or undelivered).
+  //  serial_ack  — forwarded from ESP32 hardware ack JSON.
+  //                Only arrives when firmware is updated.
+  // ════════════════════════════════════════════════════════════
+
+  const unitStatus = {};
+
+  function updateUnitStatus(unitKey, cmd, status, hwAck) {
+    unitStatus[unitKey] = {
+      cmd, status, hwAck,
+      time: new Date().toLocaleTimeString(),
+    };
+    renderUnitStatus();
+  }
+
+  function renderUnitStatus() {
+    const card = document.getElementById('unit-status-card');
+    const list = document.getElementById('unit-status-list');
+    const entries = Object.entries(unitStatus);
+    if (entries.length === 0) { card.style.display = 'none'; return; }
+    card.style.display = 'block';
+
+    list.innerHTML = entries.map(([unit, s]) => {
+      const sigLabel = s.status === 'delivered' ? 'ESP32 \u2713' : 'Not delivered';
+      const sigClass = s.status === 'delivered' ? 'delivered' : 'logged';
+      const hwColor  = s.hwAck === 'ok' ? 'var(--green)' : s.hwAck === 'err' ? 'var(--red)' : 'var(--t3)';
+      const hwLabel  = s.hwAck === 'ok' ? 'Wemos \u2713' : s.hwAck === 'err' ? 'Wemos \u2717' : 'Wemos \u2014';
+      const unitLabel = unit === 'all' ? 'All units' : 'Unit #' + unit;
+      return `<div style="display:flex;align-items:center;gap:10px;
+          padding:7px 10px;background:var(--raised);
+          border:1px solid var(--border);border-radius:6px">
+        <span style="font-family:var(--fm);font-size:12px;font-weight:600;
+          color:var(--accent);min-width:70px">${unitLabel}</span>
+        <span style="font-size:11px;color:var(--t2);flex:1">${s.cmd}</span>
+        <span class="sig-badge ${sigClass}">${sigLabel}</span>
+        <span style="font-size:9px;padding:1px 6px;border-radius:3px;
+          font-family:var(--fm);font-weight:600;letter-spacing:0.06em;
+          color:${hwColor};background:rgba(255,255,255,0.05);
+          border:1px solid ${hwColor}30">${hwLabel}</span>
+        <span style="font-size:10px;color:var(--t3);flex-shrink:0">${s.time}</span>
+      </div>`;
+    }).join('');
+  }
+
+  // ── WebSocket — camera frames + ack messages ──────────────
+  const ws = new WebSocket(
+    `${window.location.origin.replace('http','ws').replace('https','wss')}/ws?role=dashboard`
+  );
+  ws.binaryType = 'arraybuffer';
+
+  ws.onmessage = (event) => {
+    if (event.data instanceof ArrayBuffer) {
+      const view = new DataView(event.data);
+      const incomingFeedId = view.getUint32(0);
+      if (incomingFeedId != feedId) return;
+      const blob = new Blob([event.data.slice(4)], { type: 'image/jpeg' });
+      const url  = URL.createObjectURL(blob);
+      const wrap = document.getElementById('video-wrap');
+      let img = document.getElementById('live-video-stream');
+      if (!img) {
+        wrap.innerHTML = '';
+        img = document.createElement('img');
+        img.id = 'live-video-stream';
+        img.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block';
+        wrap.appendChild(img);
+      }
+      const old = img.src;
+      img.src = url;
+      if (old.startsWith('blob:')) URL.revokeObjectURL(old);
+      document.getElementById('video-status').textContent = 'LIVE FEED';
+      return;
+    }
+
+    let msg;
+    try { msg = JSON.parse(event.data); } catch (_) { return; }
+
+    if (msg.type === 'signal_ack') {
+      // Broadcast from signals.js after each serial write attempt
+      const unitKey = msg.unit !== undefined ? String(msg.unit) : 'all';
+      updateUnitStatus(unitKey, msg.cmd, msg.status, null);
+    }
+
+    if (msg.type === 'serial_ack') {
+      // Hardware echo from ESP32 firmware (requires firmware update)
+      const unitKey = msg.unit !== undefined ? String(msg.unit) : 'all';
+      if (unitStatus[unitKey]) {
+        unitStatus[unitKey].hwAck = msg.ack;
+        renderUnitStatus();
+      } else {
+        updateUnitStatus(unitKey, msg.cmd || '?', 'delivered', msg.ack);
+      }
+    }
+  };
+
+  ws.onclose = () => {
+    setTimeout(() => window.location.reload(), 3000);
+  };
+
+  // ── Init ──────────────────────────────────────────────────
+  loadFeed();
+</script>
+</body>
+</html>

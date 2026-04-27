@@ -9,7 +9,7 @@
 //  GET /api/students/:id    — single student + enrollments
 //  GET /api/students/by-section/:section_id
 // ============================================================
-
+ 
 import { Router } from 'express';
 import { query }  from '../db.js';
 import { requireAuthApi } from '../middleware/auth.js';
@@ -56,20 +56,21 @@ router.get('/', async (req, res) => {
     sql += ` AND s.section_id = $${params.length}`;
   }
 
-  // Get total count for pagination
-  const countSql = `SELECT COUNT(*) AS total FROM (${sql}) sub`;
-  const countRes = await query(countSql, params).catch(() => null);
-  const total    = countRes ? Number(countRes.rows[0].total) : 0;
-
-  // Add pagination
-  sql    += ' ORDER BY s.name ASC';
-  params.push(limit);  sql += ` LIMIT  $${params.length}`;
-  params.push(offset); sql += ` OFFSET $${params.length}`;
-
   try {
+    // Count first — params don't yet include LIMIT/OFFSET so subquery is clean
+    const countRes = await query(
+      `SELECT COUNT(*) AS total FROM (${sql}) sub`, params
+    );
+    const total = Number(countRes.rows[0].total);
+
+    // Now add ordering + pagination
+    sql += ' ORDER BY s.name ASC';
+    params.push(limit);  sql += ` LIMIT  $${params.length}`;
+    params.push(offset); sql += ` OFFSET $${params.length}`;
+
     const result = await query(sql, params);
     res.json({
-      students: result.rows,
+      students:   result.rows,
       pagination: { page, limit, total, pages: Math.ceil(total / limit) },
     });
   } catch (err) {
@@ -77,6 +78,62 @@ router.get('/', async (req, res) => {
     res.status(500).json({ error: 'Database error' });
   }
 });
+
+// ── GET /api/students/sections ───────────────────────────────
+// Returns all unique sections that have at least one student.
+// Used by student-list-page.html section filter dropdown.
+// Must come BEFORE /:student_id to avoid route collision.
+router.get('/sections', async (req, res) => {
+  try {
+    const result = await query(`
+      SELECT DISTINCT
+        sec.section_id,
+        sec.section_name,
+        sec.course_code,
+        sec.initials,
+        sec.year,
+        sec.year_session,
+        c.course_name
+      FROM   students s
+      JOIN   sections sec ON sec.section_id = s.section_id
+      JOIN   courses  c   ON c.course_code  = sec.course_code
+      WHERE  s.section_id IS NOT NULL
+      ORDER  BY sec.course_code, sec.section_name
+    `);
+    res.json({ sections: result.rows });
+  } catch (err) {
+    console.error('[Students] Sections error:', err.message);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+
+// ── GET /api/students/sections-all ───────────────────────────
+// Returns ALL sections regardless of enrollment.
+// Used by exam-setup-page.html course/section cascade.
+// Distinct from /sections which filters to enrolled-only.
+router.get('/sections-all', async (req, res) => {
+  try {
+    const result = await query(`
+      SELECT
+        sec.section_id,
+        sec.section_name,
+        sec.course_code,
+        sec.initials,
+        sec.year,
+        sec.year_session,
+        c.course_name
+      FROM   sections sec
+      JOIN   courses  c ON c.course_code = sec.course_code
+      ORDER  BY sec.course_code, sec.section_name
+    `);
+    res.json({ sections: result.rows });
+  } catch (err) {
+    console.error('[Students] Sections-all error:', err.message);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
 
 // ── GET /api/students/by-section/:section_id ─────────────────
 // Must come BEFORE /:student_id to avoid route collision

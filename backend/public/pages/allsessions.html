@@ -1,0 +1,605 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+  <title>All Sessions | ExamNexus</title>
+
+  <!-- Theme runs before paint to avoid flash -->
+  <script src="../scripts/theme-controller.js"></script>
+
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            primary:              '#FF5722',
+            secondary:            '#10B981',
+            danger:               '#EF4444',
+            warning:              '#F59E0B',
+            'background-light':   '#F9FAFB',
+            'background-dark':    '#111827',
+            'surface-light':      '#FFFFFF',
+            'surface-dark':       '#1F2937',
+            'text-light':         '#1F2937',
+            'text-dark':          '#F3F4F6',
+            'border-light':       '#E5E7EB',
+            'border-dark':        '#374151',
+          },
+          fontFamily: { sans: ['Inter', 'sans-serif'] },
+        },
+      },
+    };
+  </script>
+
+  <style>
+    html, body { height: 100%; margin: 0; }
+    body { font-family: 'Inter', sans-serif; }
+
+    .app-layout { display: flex; height: 100vh; overflow: hidden; }
+    .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+    /* ── Page header ── */
+    .page-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 28px 32px 20px;
+      border-bottom: 1px solid #E5E7EB;
+      background: #fff;
+    }
+    .dark .page-header { background: #1F2937; border-color: #374151; }
+    .page-title { font-size: 22px; font-weight: 700; }
+    .page-sub   { font-size: 13px; color: #9CA3AF; margin-top: 2px; }
+
+    .btn-primary {
+      background: #FF5722; color: #fff; border: none;
+      padding: 9px 18px; border-radius: 8px; font-size: 13.5px;
+      font-weight: 600; cursor: pointer; display: flex;
+      align-items: center; gap: 6px; transition: background 0.15s;
+      font-family: inherit;
+    }
+    .btn-primary:hover { background: #E64A19; }
+
+    .content-area { flex: 1; overflow-y: auto; padding: 24px 32px; background: #F9FAFB; }
+    .dark .content-area { background: #111827; }
+    .page-title { font-size: 22px; font-weight: 700; color: #1F2937; }
+    .dark .page-title { color: #F3F4F6; }
+    .result-count { font-size: 13px; color: #6B7280; margin-left: auto; }
+
+    /* ── Pagination ── */
+    .pagination { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 20px 0; }
+    .page-btn {
+      width: 32px; height: 32px; border-radius: 6px; border: 1px solid #E5E7EB;
+      background: transparent; color: #6B7280; font-size: 12px; font-family: inherit;
+      cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.12s;
+    }
+    .dark .page-btn { border-color: #374151; color: #9CA3AF; }
+    .page-btn:hover { border-color: #FF5722; color: #FF5722; }
+    .page-btn.active { background: #FFF3EE; border-color: #FF5722; color: #FF5722; }
+    .page-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    /* ── Search ── */
+    .search-row { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+    .search-wrapper { position: relative; flex: 1; max-width: 480px; }
+    .search-icon {
+      position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+      color: #9CA3AF; font-size: 18px; pointer-events: none;
+    }
+    .search-input {
+      width: 100%; padding: 9px 12px 9px 38px; border: 1px solid #E5E7EB;
+      border-radius: 8px; font-size: 13.5px; background: #fff; color: #1F2937;
+      outline: none; font-family: inherit; transition: border-color 0.15s;
+    }
+    .dark .search-input { background: #1F2937; color: #F3F4F6; border-color: #374151; }
+    .search-input:focus { border-color: #FF5722; }
+    .search-input::placeholder { color: #9CA3AF; }
+    .result-count { font-size: 13px; color: #6B7280; margin-left: auto; }
+
+    /* ── Table card ── */
+    .table-card { background: #fff; border: 1px solid #E5E7EB; border-radius: 12px; overflow: hidden; }
+    .dark .table-card { background: #1F2937; border-color: #374151; }
+
+    table { width: 100%; border-collapse: collapse; }
+    thead tr { border-bottom: 1px solid #F3F4F6; }
+    .dark thead tr { border-color: #374151; }
+    thead th {
+      padding: 11px 16px; text-align: left; font-size: 11px; font-weight: 600;
+      color: #9CA3AF; letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap;
+    }
+    tbody tr { border-bottom: 1px solid #F9FAFB; transition: background 0.1s; cursor: pointer; }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: #FFF8F6; }
+    .dark tbody tr { border-color: #374151; }
+    .dark tbody tr:hover { background: #374151; }
+    tbody td { padding: 14px 16px; font-size: 13.5px; color: #1F2937; }
+    .dark tbody td { color: #D1D5DB; }
+    .td-muted { color: #6B7280 !important; }
+    .dark .td-muted { color: #9CA3AF !important; }
+
+    /* ── Session name cell ── */
+    .session-name-cell { display: flex; align-items: center; gap: 10px; }
+    .folder-icon {
+      width: 28px; height: 28px; border-radius: 6px;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .folder-icon.active { background: #FFF3EE; color: #FF5722; }
+    .folder-icon.ended  { background: #F3F4F6; color: #9CA3AF; }
+    .dark .folder-icon.ended { background: #374151; }
+    .folder-icon .material-icons-outlined { font-size: 16px; }
+
+    /* ── Badges ── */
+    .badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 20px; font-size: 11.5px; font-weight: 600; }
+    .badge-active::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #16A34A; display: inline-block; }
+    .badge-active    { background: #F0FDF4; color: #16A34A; }
+    .badge-completed { background: #F9FAFB; color: #9CA3AF; }
+    .dark .badge-completed { background: #374151; }
+
+    /* ── Alert count ── */
+    .alert-count { font-weight: 600; }
+    .alert-count.has-alerts { color: #F59E0B; }
+    .alert-count.no-alerts  { color: #D1D5DB; }
+
+    /* ── Action buttons ── */
+    .action-btns { display: flex; align-items: center; gap: 4px; }
+    .action-btn {
+      background: none; border: none; padding: 5px; border-radius: 6px;
+      cursor: pointer; color: #9CA3AF; transition: all 0.15s;
+    }
+    .action-btn:hover { background: #F3F4F6; color: #1F2937; }
+    .dark .action-btn:hover { background: #374151; color: #F3F4F6; }
+    .action-btn .material-icons-outlined { font-size: 17px; }
+
+    /* ── Empty state ── */
+    .empty-state { padding: 56px 32px; text-align: center; color: #9CA3AF; font-size: 14px; }
+
+    /* ── Modal ── */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+      z-index: 200; align-items: center; justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-box {
+      background: #fff; border-radius: 14px; padding: 28px 32px;
+      width: min(500px, 95vw); display: flex; flex-direction: column; gap: 16px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+    }
+    .dark .modal-box { background: #1F2937; }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; }
+    .modal-title { font-size: 18px; font-weight: 700; }
+    .modal-close {
+      background: none; border: none; cursor: pointer; color: #9CA3AF;
+      padding: 4px; border-radius: 6px; transition: color 0.15s;
+    }
+    .modal-close:hover { color: #1F2937; }
+
+    .form-field { display: flex; flex-direction: column; gap: 5px; }
+    .form-label { font-size: 12.5px; font-weight: 600; color: #374151; }
+    .dark .form-label { color: #D1D5DB; }
+    .form-hint  { font-size: 11px; color: #9CA3AF; }
+    .form-input {
+      padding: 9px 12px; border: 1px solid #E5E7EB; border-radius: 8px;
+      font-size: 13.5px; font-family: inherit; color: #1F2937;
+      outline: none; transition: border-color 0.15s; background: #fff;
+    }
+    .dark .form-input { background: #111827; color: #F3F4F6; border-color: #374151; }
+    .form-input:focus { border-color: #FF5722; }
+    .form-input::placeholder { color: #9CA3AF; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+    .modal-error {
+      display: none; background: #FEF2F2; border: 1px solid #FECACA;
+      color: #DC2626; border-radius: 8px; padding: 10px 14px; font-size: 12.5px;
+    }
+    .modal-footer { display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px; }
+    .btn-ghost {
+      background: none; border: 1px solid #E5E7EB; color: #6B7280;
+      padding: 9px 16px; border-radius: 8px; font-size: 13.5px;
+      font-weight: 500; cursor: pointer; transition: all 0.15s; font-family: inherit;
+    }
+    .dark .btn-ghost { border-color: #374151; color: #9CA3AF; }
+    .btn-ghost:hover { background: #F9FAFB; color: #1F2937; }
+    .dark .btn-ghost:hover { background: #374151; color: #F3F4F6; }
+
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #D1D5DB; border-radius: 3px; }
+    tr.hidden-row { display: none; }
+  </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark antialiased">
+
+<div class="app-layout">
+
+  <!-- Sidebar injected by component-loader.js -->
+  <div id="sidebar-placeholder"></div>
+
+  <!-- ── Main ── -->
+  <div class="main-content">
+
+    <div class="page-header">
+      <div>
+        <div class="page-title">Session Management</div>
+        <div class="page-sub" id="session-count">Loading...</div>
+      </div>
+      <button class="btn-primary" onclick="openModal()">
+        <span style="font-size:18px;line-height:1">+</span> New Session
+      </button>
+    </div>
+
+    <div class="content-area ">
+      <div class="search-row">
+        <div class="search-wrapper">
+          <span class="material-icons-outlined search-icon">search</span>
+          <input class="search-input" id="search-input"
+            placeholder="Search sessions..." oninput="filterTable()">
+        </div>
+        <span class="result-count" id="result-count"></span>
+      </div>
+
+      <div class="table-card">
+        <table>
+          <thead>
+            <tr>
+              <th>Session Name</th>
+              <th>Course</th>
+              <th>Instructor</th>
+              <th>Seats</th>
+              <th>Alerts</th>
+              <th>Status</th>
+              <th>Created</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="sessions-table">
+            <tr><td colspan="8"><div class="empty-state">Loading sessions...</div></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="pagination" id="pagination"></div>
+    </div>
+  </div>
+</div>
+
+<!-- New Session Modal -->
+<div class="modal-overlay" id="modal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title">New Exam Session</div>
+      <button class="modal-close" onclick="closeModal()">
+        <span class="material-icons-outlined">close</span>
+      </button>
+    </div>
+
+    <div class="form-field">
+      <label class="form-label">Session Name <span style="color:#EF4444">*</span></label>
+      <input class="form-input" id="inp-name"
+        placeholder="e.g. CSE299_Midterm_April2026" maxlength="80">
+      <span class="form-hint">Special characters become underscores.</span>
+    </div>
+
+    <div class="form-field">
+      <label class="form-label">Course</label>
+      <select class="form-input" id="inp-course-select">
+        <option value="">Select course...</option>
+      </select>
+    </div>
+
+    <div class="form-field">
+      <label class="form-label">Section</label>
+      <select class="form-input" id="inp-section-select" disabled>
+        <option value="">Select course first</option>
+      </select>
+    </div>
+
+    <div class="form-row">
+      <div class="form-field">
+        <label class="form-label">
+          Course Name <span class="form-hint">(override)</span>
+        </label>
+        <input class="form-input" id="inp-course" placeholder="e.g. Junior Design Project">
+      </div>
+      <div class="form-field">
+        <label class="form-label">Instructor</label>
+        <input class="form-input" id="inp-instructor" placeholder="e.g. Dr. Rahman">
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-field">
+        <label class="form-label">Time Block</label>
+        <input class="form-input" id="inp-time" placeholder="e.g. 09:00 – 11:00">
+      </div>
+      <div class="form-field">
+        <label class="form-label">Exam Type</label>
+        <select class="form-input" id="inp-exam-type">
+          <option value="midterm">Midterm</option>
+          <option value="quiz">Quiz</option>
+          <option value="final">Final</option>
+          <option value="mock">Mock</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="modal-error" id="modal-error"></div>
+
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn-primary" onclick="createSession()">▶ Start Session</button>
+    </div>
+  </div>
+</div>
+<script src="../scripts/theme-controller.js"></script>
+<script src="../scripts/component-loader.js"></script>
+<script>
+  async function api(url, opts = {}) {
+    try {
+      const res = await fetch(url, { credentials: 'include', ...opts });
+      if (res.status === 401) { window.location.href = '/login'; return null; }
+      if (!res.ok) throw new Error(await res.text());
+      return await res.json();
+    } catch (err) { console.error('[api]', url, err.message); return null; }
+  }
+
+  // ── Pagination state ──────────────────────────────────────
+  let allSessions  = [];
+  let currentPage  = 1;
+  let totalPages   = 1;
+  const PAGE_SIZE  = 15;
+
+  async function loadSessions() {
+    const data = await api('/api/sessions');
+    if (!data) {
+      document.getElementById('sessions-table').innerHTML =
+        '<tr><td colspan="8"><div class="empty-state">Failed to load sessions.</div></td></tr>';
+      return;
+    }
+    allSessions = data.sessions || [];
+    currentPage = 1;
+    renderFiltered();
+  }
+
+  function getFiltered() {
+    const q = document.getElementById('search-input').value.toLowerCase().trim();
+    if (!q) return allSessions;
+    return allSessions.filter(s =>
+      (s.name||'').toLowerCase().includes(q) ||
+      (s.course_name||'').toLowerCase().includes(q) ||
+      (s.instructor_name||'').toLowerCase().includes(q)
+    );
+  }
+
+  function renderFiltered() {
+    const filtered = getFiltered();
+    totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+    if (currentPage > totalPages) currentPage = totalPages;
+
+    const start  = (currentPage - 1) * PAGE_SIZE;
+    const paged  = filtered.slice(start, start + PAGE_SIZE);
+
+    const q = document.getElementById('search-input').value.trim();
+    document.getElementById('session-count').textContent =
+      `${allSessions.length} session${allSessions.length !== 1 ? 's' : ''} total`;
+    document.getElementById('result-count').textContent =
+      q ? `${filtered.length} results` : `${allSessions.length} results`;
+
+    renderTable(paged);
+    renderPagination(filtered.length);
+  }
+
+  function fmtDate(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleDateString('en-US',
+      { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function renderTable(sessions) {
+    const tbody = document.getElementById('sessions-table');
+    if (!sessions.length) {
+      tbody.innerHTML =
+        '<tr><td colspan="8"><div class="empty-state">No sessions found.</div></td></tr>';
+      return;
+    }
+    tbody.innerHTML = sessions.map(s => {
+      const isActive = !s.ended_at;
+      const alerts   = Number(s.detection_count || 0);
+      const seats    = Number(s.seat_count || 0);
+      return `
+        <tr data-name="${escHtml((s.name||'').toLowerCase())}"
+            data-course="${escHtml((s.course_name||'').toLowerCase())}"
+            data-instructor="${escHtml((s.instructor_name||'').toLowerCase())}"
+            onclick="window.location='/session?id=${s.id}'">
+          <td>
+            <div class="session-name-cell">
+              <div class="folder-icon ${isActive?'active':'ended'}">
+                <span class="material-icons-outlined">${isActive?'folder_open':'folder'}</span>
+              </div>
+              <span style="font-weight:${isActive?'700':'500'}">${escHtml(s.name)}</span>
+            </div>
+          </td>
+          <td class="td-muted">${escHtml(s.course_name||'—')}</td>
+          <td class="td-muted">${escHtml(s.instructor_name||'—')}</td>
+          <td style="font-weight:600">${seats}</td>
+          <td><span class="alert-count ${alerts>0?'has-alerts':'no-alerts'}">${alerts}</span></td>
+          <td>
+            ${isActive
+              ? '<span class="badge badge-active">Active</span>'
+              : '<span class="badge badge-completed">Completed</span>'}
+          </td>
+          <td class="td-muted" style="font-size:13px">${fmtDate(s.created_at)}</td>
+          <td onclick="event.stopPropagation()">
+            <div class="action-btns">
+              <button class="action-btn" title="View"
+                onclick="window.location='/session?id=${s.id}'">
+                <span class="material-icons-outlined">visibility</span>
+              </button>
+              ${isActive ? `
+              <button class="action-btn" title="End session"
+                onclick="confirmEnd(${s.id})">
+                <span class="material-icons-outlined" style="color:#EF4444">stop_circle</span>
+              </button>` : ''}
+            </div>
+          </td>
+        </tr>`;
+    }).join('');
+  }
+
+  // ── Pagination controls ───────────────────────────────────
+  function renderPagination(total) {
+    const wrap = document.getElementById('pagination');
+    if (!wrap) return;
+    if (totalPages <= 1) { wrap.innerHTML = ''; return; }
+
+    const btn = (label, p, active = false, disabled = false) => {
+      if (disabled) return `<button class="page-btn" disabled>${label}</button>`;
+      return `<button class="page-btn${active?' active':''}" onclick="goPage(${p})">${label}</button>`;
+    };
+
+    let html = btn('‹', currentPage - 1, false, currentPage <= 1);
+    const max = 7;
+    let start = Math.max(1, currentPage - 3);
+    let end   = Math.min(totalPages, start + max - 1);
+    if (end - start < max - 1) start = Math.max(1, end - max + 1);
+
+    if (start > 1) { html += btn('1', 1); if (start > 2) html += `<span style="color:#9CA3AF;padding:0 4px">…</span>`; }
+    for (let p = start; p <= end; p++) html += btn(p, p, p === currentPage);
+    if (end < totalPages) { if (end < totalPages - 1) html += `<span style="color:#9CA3AF;padding:0 4px">…</span>`; html += btn(totalPages, totalPages); }
+    html += btn('›', currentPage + 1, false, currentPage >= totalPages);
+    wrap.innerHTML = html;
+  }
+
+  function goPage(p) {
+    if (p < 1 || p > totalPages) return;
+    currentPage = p;
+    renderFiltered();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function filterTable() { currentPage = 1; renderFiltered(); }
+
+  async function confirmEnd(id) {
+    if (!confirm('End this session? Cameras will need to reconnect for the next one.')) return;
+    const res = await fetch(`/api/sessions/${id}/end`,
+      { method:'PUT', credentials:'include' });
+    if (res.ok) loadSessions();
+    else alert('Failed to end session.');
+  }
+
+  // ── Modal ─────────────────────────────────────────────────
+  function openModal() {
+    document.getElementById('modal').classList.add('open');
+    document.getElementById('inp-name').focus();
+    document.getElementById('modal-error').style.display = 'none';
+    loadCourseDropdown();
+  }
+  function closeModal() {
+    document.getElementById('modal').classList.remove('open');
+    ['inp-name','inp-course','inp-instructor','inp-time']
+      .forEach(id => { document.getElementById(id).value = ''; });
+    document.getElementById('inp-exam-type').value = 'midterm';
+    document.getElementById('inp-course-select').value = '';
+    document.getElementById('inp-section-select').innerHTML =
+      '<option value="">Select course first</option>';
+    document.getElementById('inp-section-select').disabled = true;
+    document.getElementById('modal-error').style.display = 'none';
+  }
+  document.getElementById('modal').addEventListener('click', e => {
+    if (e.target === document.getElementById('modal')) closeModal();
+  });
+
+  // ── Course dropdown via /api/students/sections ────────────
+  async function loadCourseDropdown() {
+    const data = await api('/api/students/sections');
+    if (!data) return;
+    const courses = new Map();
+    (data.sections||[]).forEach(s => {
+      if (!courses.has(s.course_code))
+        courses.set(s.course_code, s.course_name || s.course_code);
+    });
+    window._allSections = data.sections || [];
+    const sel = document.getElementById('inp-course-select');
+    sel.innerHTML = '<option value="">Select course...</option>';
+    [...courses.entries()].sort().forEach(([code, name]) => {
+      const o = document.createElement('option');
+      o.value = code; o.dataset.name = name;
+      o.text = `${code} — ${name}`; sel.appendChild(o);
+    });
+  }
+
+  document.getElementById('inp-course-select').addEventListener('change', function () {
+    const code = this.value;
+    const name = this.options[this.selectedIndex]?.dataset.name || '';
+    if (name) document.getElementById('inp-course').value = name;
+    const secSel = document.getElementById('inp-section-select');
+    if (!code) {
+      secSel.innerHTML = '<option value="">Select course first</option>';
+      secSel.disabled = true; return;
+    }
+    const matching = (window._allSections||[]).filter(s => s.course_code === code);
+    secSel.innerHTML = '<option value="">Select section...</option>';
+    secSel.disabled = false;
+    matching.sort((a,b) => a.section_name.localeCompare(b.section_name)).forEach(sec => {
+      const o = document.createElement('option');
+      o.value = sec.section_id;
+      o.dataset.initials = sec.initials || '';
+      o.text = `Section ${sec.section_name}${sec.initials?' — '+sec.initials:''} (${sec.year_session} ${sec.year})`;
+      secSel.appendChild(o);
+    });
+  });
+
+  document.getElementById('inp-section-select').addEventListener('change', function () {
+    const i = this.options[this.selectedIndex]?.dataset.initials || '';
+    if (i) document.getElementById('inp-instructor').value = i;
+  });
+
+  async function createSession() {
+    const name       = document.getElementById('inp-name').value.trim();
+    const course     = document.getElementById('inp-course').value.trim();
+    const instructor = document.getElementById('inp-instructor').value.trim();
+    const time       = document.getElementById('inp-time').value.trim();
+    const examType   = document.getElementById('inp-exam-type').value;
+    const sectionId  = document.getElementById('inp-section-select').value;
+    const errEl      = document.getElementById('modal-error');
+
+    if (!name) {
+      errEl.textContent = 'Session name is required.';
+      errEl.style.display = 'block'; return;
+    }
+    const data = await api('/api/sessions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name, course_name: course||null, instructor_name: instructor||null,
+        time_block: time||null, exam_type: examType||'midterm',
+        section_id: sectionId ? parseInt(sectionId) : null,
+      }),
+    });
+    if (!data) {
+      errEl.textContent = 'Network error. Please try again.';
+      errEl.style.display = 'block'; return;
+    }
+    if (data.error) {
+      errEl.textContent = data.error;
+      errEl.style.display = 'block'; return;
+    }
+    closeModal();
+    window.location.href = `/session?id=${data.session.id}`;
+  }
+
+  document.querySelectorAll('.modal-box .form-input').forEach(inp => {
+    inp.addEventListener('keydown', e => { if (e.key === 'Enter') createSession(); });
+  });
+
+  loadSessions();
+</script>
+</body>
+</html>

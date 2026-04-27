@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Proctor — Incidents</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div class="layout">
+  <div id="sidebar" style="min-width:200px;width:200px;flex-shrink:0"></div>
+
+  <main class="main">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Incident Log</div>
+        <div class="page-sub">Full audit trail of all flagged detections</div>
+      </div>
+      <button class="btn btn-ghost" onclick="exportCSV()">↓ Export CSV</button>
+    </div>
+
+    <!-- Filters -->
+    <div class="filter-bar">
+
+      <!-- Session dropdown — populated from all sessions -->
+      <div class="filter-group">
+        <label>Session</label>
+        <select class="input" id="filter-session"
+          style="padding:7px 10px;font-size:12px"
+          onchange="onSessionChange()">
+          <option value="active">Active session</option>
+          <option value="all">All sessions</option>
+          <!-- Dynamic session options added on init -->
+        </select>
+      </div>
+
+      <!-- Feed dropdown — repopulated when session changes -->
+      <div class="filter-group">
+        <label>
+          Feed
+          <span id="feed-hint"
+            style="color:var(--t3);font-size:10px;margin-left:4px;font-weight:400">
+          </span>
+        </label>
+        <select class="input" id="filter-feed"
+          style="padding:7px 10px;font-size:12px">
+          <option value="all">All feeds</option>
+          <!-- Populated by populateFeedDropdown() -->
+        </select>
+      </div>
+
+      <!-- Detection type — static list matching YOLO classes -->
+      <div class="filter-group">
+        <label>Detection Type</label>
+        <select class="input" id="filter-class"
+          style="padding:7px 10px;font-size:12px">
+          <option value="all">All types</option>
+          <option value="phone">phone</option>
+          <option value="cheatsheet">cheatsheet</option>
+          <option value="cheating">cheating</option>
+          <option value="looking_away">looking_away</option>
+          <option value="person">person</option>
+        </select>
+      </div>
+
+      <button class="btn btn-ghost" style="align-self:flex-end"
+        onclick="loadIncidents()">
+        ⟳ Apply
+      </button>
+
+    </div>
+
+    <!-- Results table -->
+    <div class="card" style="padding:0;overflow:hidden">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Time</th>
+            <th>Session</th>
+            <th>Candidate</th>
+            <th>Detection</th>
+            <th>Confidence</th>
+            <th>Severity</th>
+          </tr>
+        </thead>
+        <tbody id="incident-table">
+          <tr>
+            <td colspan="7"
+              style="color:var(--t3);text-align:center">
+              Loading...
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </main>
+</div>
+
+<script src="/js/nav.js"></script>
+<script>
+  document.getElementById('sidebar').innerHTML = buildSidebar();
+  initSidebar();
+
+  // ── State ─────────────────────────────────────────────────
+  let currentData     = [];   // current incident rows for CSV export
+  let activeSessionId = null; // currently active session id
+  let allSessions     = [];   // all sessions for dropdown
+
+  // ── Bootstrap ─────────────────────────────────────────────
+  async function init() {
+    // Get active session so "Active session" option resolves correctly
+    const active    = await api('/api/sessions/active');
+    activeSessionId = active?.session?.id || null;
+
+    // Load all sessions to populate the session dropdown
+    const sessData = await api('/api/sessions');
+    allSessions    = sessData?.sessions || [];
+
+    populateSessionDropdown();
+
+    // Load feeds for the default selected session, then load incidents
+    await onSessionChange();
+  }
+
+  // ── Session dropdown ──────────────────────────────────────
+  function populateSessionDropdown() {
+    const sel = document.getElementById('filter-session');
+
+    // Remove any previously added dynamic options
+    // (keep "Active session" and "All sessions" at index 0 and 1)
+    while (sel.options.length > 2) sel.remove(2);
+
+    allSessions.forEach(s => {
+      const opt   = document.createElement('option');
+      opt.value   = s.id;
+      opt.text    = s.name + (s.ended_at ? '' : ' ● active');
+      // Pre-select the active session
+      if (s.id === activeSessionId) opt.selected = true;
+      sel.appendChild(opt);
+    });
+  }
+
+  // ── Called whenever session dropdown changes ──────────────
+  // Repopulates the feed dropdown based on which session is selected,
+  // using session_feeds attendance records for that session.
+  // This mirrors the signal history date→session coupling logic.
+  async function onSessionChange() {
+    const sessionVal = document.getElementById('filter-session').value;
+
+    // Resolve session value → actual session id
+    let resolvedId = null;
+    if (sessionVal === 'active') {
+      resolvedId = activeSessionId;
+    } else if (sessionVal !== 'all') {
+      resolvedId = parseInt(sessionVal);
+    }
+    // 'all' → resolvedId stays null → show all feeds
+
+    await populateFeedDropdown(resolvedId);
+
+    // Auto-apply filter when session changes so results stay in sync
+    loadIncidents();
+  }
+
+  // ── Feed dropdown — populated from session_feeds ──────────
+  // When a specific session is selected: fetch attendance for that
+  // session and list only those feeds.
+  // When "All sessions" is selected: list all feeds that have ever
+  // had a detection (derived from the incidents table itself).
+  async function populateFeedDropdown(sessionId) {
+    const sel  = document.getElementById('filter-feed');
+    const hint = document.getElementById('feed-hint');
+
+    // Remember current selection so we can try to restore it
+    const previousValue = sel.value;
+
+    // Reset to "All feeds" only
+    sel.innerHTML = '<option value="all">All feeds</option>';
+
+    if (sessionId) {
+      // ── Session-specific feeds: use attendance table ───────
+      // session_feeds has the exact seats that were present,
+      // even if those feed rows are now soft-deleted.
+      const data = await api(`/api/sessions/${sessionId}/attendance`);
+      const rows = data?.attendance || [];
+
+      if (rows.length > 0) {
+        rows.forEach(row => {
+          const opt   = document.createElement('option');
+          opt.value   = row.feed_id;
+          // Show candidate name if set, otherwise just seat label
+          opt.text    = row.candidate_name
+            ? `${row.feed_label} — ${row.candidate_name}`
+            : row.feed_label;
+          sel.appendChild(opt);
+        });
+        hint.textContent = `(${rows.length} seat${rows.length !== 1 ? 's' : ''} in this session)`;
+      } else {
+        // Session has no attendance records (pre-attendance-tracking sessions)
+        // Fall back to feeds derived from detections for this session
+        const inc = await api(`/api/incidents?sessionId=${sessionId}`);
+        const feedMap = {};
+        (inc?.incidents || []).forEach(i => {
+          if (i.feed_id && !feedMap[i.feed_id]) {
+            feedMap[i.feed_id] = i.feed_label || `Feed ${i.feed_id}`;
+          }
+        });
+        Object.entries(feedMap).forEach(([id, label]) => {
+          const opt = document.createElement('option');
+          opt.value = id;
+          opt.text  = label;
+          sel.appendChild(opt);
+        });
+        hint.textContent = rows.length === 0
+          ? '(no attendance records — showing from detections)'
+          : '';
+      }
+
+    } else {
+      // ── All sessions: derive feed list from all detections ─
+      // We can't use the current feeds table because historical feeds
+      // are soft-deleted. Derive from detections which always have
+      // the feed_label via JOIN.
+      const inc = await api('/api/incidents');
+      const feedMap = {};
+      (inc?.incidents || []).forEach(i => {
+        if (i.feed_id && !feedMap[i.feed_id]) {
+          feedMap[i.feed_id] = i.feed_label || `Feed ${i.feed_id}`;
+        }
+      });
+
+      // Sort by label for readability
+      Object.entries(feedMap)
+        .sort(([, a], [, b]) => a.localeCompare(b))
+        .forEach(([id, label]) => {
+          const opt = document.createElement('option');
+          opt.value = id;
+          opt.text  = label;
+          sel.appendChild(opt);
+        });
+
+      hint.textContent = '';
+    }
+
+    // Restore previous selection if that feed is still in the list
+    const optionValues = [...sel.options].map(o => o.value);
+    if (optionValues.includes(previousValue)) {
+      sel.value = previousValue;
+    }
+    // else defaults to "All feeds"
+  }
+
+  // ── Load incidents from backend ───────────────────────────
+  async function loadIncidents() {
+    const sessionVal = document.getElementById('filter-session').value;
+    const feedId     = document.getElementById('filter-feed').value;
+    const classLabel = document.getElementById('filter-class').value;
+
+    const params = new URLSearchParams();
+
+    // Resolve session filter to actual id
+    if (sessionVal === 'active') {
+      if (activeSessionId) params.set('sessionId', activeSessionId);
+    } else if (sessionVal !== 'all') {
+      params.set('sessionId', sessionVal);
+    }
+
+    if (feedId     !== 'all') params.set('feedId',     feedId);
+    if (classLabel !== 'all') params.set('classLabel', classLabel);
+
+    const data = await api(`/api/incidents?${params}`);
+    if (!data) return;
+
+    currentData = data.incidents;
+    renderTable(currentData);
+  }
+
+  // ── Render results table ──────────────────────────────────
+  function renderTable(rows) {
+    const tbody = document.getElementById('incident-table');
+
+    if (rows.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="7"
+            style="color:var(--t3);text-align:center;padding:32px">
+            No incidents found
+          </td>
+        </tr>`;
+      return;
+    }
+
+    tbody.innerHTML = rows.map((inc, i) => {
+      const conf     = inc.confidence;
+      const severity = conf >= 0.85 ? 'HIGH'
+                     : conf >= 0.65 ? 'MODERATE' : 'LOW';
+      const sevClass = conf >= 0.85 ? 'badge-alert'
+                     : conf >= 0.65 ? 'badge-warn' : 'badge-live';
+      const time     = new Date(inc.detected_at);
+      const session  = inc.session_name || '—';
+
+      return `<tr>
+        <td style="color:var(--t3)">${i + 1}</td>
+        <td style="color:var(--t2)">
+          ${time.toLocaleTimeString()}
+          <span style="color:var(--t3);font-size:10px;margin-left:4px">
+            ${time.toLocaleDateString()}
+          </span>
+        </td>
+        <td style="color:var(--accent);font-size:11px">${session}</td>
+        <td style="font-weight:500">${inc.feed_label || '—'}</td>
+        <td>
+          <span style="padding:2px 8px;background:var(--rdim);
+            color:var(--red);border-radius:2px;
+            font-size:11px;letter-spacing:0.06em">
+            ${inc.class_label}
+          </span>
+        </td>
+        <td style="color:${conf >= 0.8 ? 'var(--red)' : 'var(--amber)'}">
+          ${(conf * 100).toFixed(1)}%
+        </td>
+        <td><span class="badge ${sevClass}">${severity}</span></td>
+      </tr>`;
+    }).join('');
+  }
+
+  // ── CSV export ────────────────────────────────────────────
+  function exportCSV() {
+    if (!currentData.length) return;
+    const headers = ['#','Time','Session','Candidate','Detection','Confidence'];
+    const rows    = currentData.map((inc, i) => [
+      i + 1,
+      new Date(inc.detected_at).toISOString(),
+      inc.session_name || '',
+      inc.feed_label   || '',
+      inc.class_label,
+      (inc.confidence * 100).toFixed(2) + '%'
+    ]);
+    const csv  = [headers, ...rows].map(r => r.join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = `incidents_${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  // ── Start ─────────────────────────────────────────────────
+  init();
+</script>
+</body>
+</html>

@@ -17,6 +17,8 @@ import penlogRoutes   from './routes/penlog.js';
 import historyRoutes  from './routes/history.js';
 import sessionRoutes  from './routes/sessions.js';
 import studentRoutes  from './routes/students.js';   // ← new
+import cameraLinksRouter  from './routes/camera-links.js'; 
+import settingsRouter      from './routes/settings.js';
 import pageRouter     from './pages/router.js';
 import { setupWebSocket } from './wsHandler.js';
  
@@ -40,7 +42,8 @@ app.use('/api/penlog',     penlogRoutes);
 app.use('/api/history',    historyRoutes);
 app.use('/api/sessions',   sessionRoutes);
 app.use('/api/students',   studentRoutes);            // ← new
-
+app.use('/api/camera-links', cameraLinksRouter)
+ app.use('/api/settings', settingsRouter)
  
 // app.get('/', (req, res) => {
 //   res.send('Server is running');

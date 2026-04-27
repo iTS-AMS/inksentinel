@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Proctor — Login</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div class="login-page">
+  <div class="login-grid"></div>
+
+  <div class="login-panel">
+    <div class="login-logo">
+      <div class="login-icon">◈</div>
+      <div>
+        <div class="login-title">PROCTOR</div>
+        <div class="login-sub">Exam Monitoring System</div>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="login-heading">SECURE ACCESS</div>
+    <div class="login-desc">Authorized personnel only</div>
+
+    <div class="error-box" id="error-box" style="display:none">
+      <span>⚠</span>
+      <span id="error-msg"></span>
+    </div>
+
+    <div class="form-field">
+      <label for="username">Username</label>
+      <input class="input" id="username" type="text"
+        placeholder="Enter username" autocomplete="username">
+    </div>
+
+    <div class="form-field">
+      <label for="password">Password</label>
+      <input class="input" id="password" type="password"
+        placeholder="Enter password" autocomplete="current-password">
+    </div>
+
+    <button class="btn btn-primary submit-btn" id="login-btn" onclick="doLogin()">
+      SIGN IN
+    </button>
+
+    <div class="login-footer">Demo credentials: admin / proctor123</div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Enter') doLogin();
+  });
+
+  async function doLogin() {
+    const btn      = document.getElementById('login-btn');
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value;
+
+    if (!username || !password) {
+      showError('Please enter username and password');
+      return;
+    }
+
+    btn.textContent = 'AUTHENTICATING...';
+    btn.disabled    = true;
+
+    const res  = await fetch('/api/auth/login', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ username, password })
+    });
+
+    const data = await res.json();
+
+    if (res.ok) {
+      window.location.href = data.redirect;
+    } else {
+      showError(data.error || 'Login failed');
+      btn.textContent = 'SIGN IN';
+      btn.disabled    = false;
+    }
+  }
+
+  function showError(msg) {
+    document.getElementById('error-msg').textContent  = msg;
+    document.getElementById('error-box').style.display = 'flex';
+  }
+</script>
+</body>
+</html>

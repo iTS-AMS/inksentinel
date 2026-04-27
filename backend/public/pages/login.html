@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ExamNexus | Login</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet"/>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            primary:            '#FF5722',
+            'primary-hover':    '#E64A19',
+            'background-light': '#F9FAFB',
+            'background-dark':  '#111827',
+            'surface-light':    '#FFFFFF',
+            'surface-dark':     '#1F2937',
+            'text-light':       '#1F2937',
+            'text-dark':        '#F3F4F6',
+            'border-light':     '#E5E7EB',
+            'border-dark':      '#374151',
+          },
+          fontFamily: { sans: ['Inter', 'sans-serif'] },
+        },
+      },
+    };
+  </script>
+  <!-- Apply theme before paint -->
+  <script>
+    (function() {
+      const t = localStorage.getItem('examnexus-theme') || 'system';
+      if (t === 'dark' || (t === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches))
+        document.documentElement.classList.add('dark');
+    })();
+  </script>
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 3px; }
+    .dark ::-webkit-scrollbar-thumb { background: #475569; }
+  </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark min-h-screen flex flex-col transition-colors duration-200">
+
+  <!-- Header -->
+  <header class="flex items-center justify-between border-b border-border-light dark:border-border-dark px-6 md:px-16 py-4 bg-surface-light dark:bg-surface-dark sticky top-0 z-50">
+    <div class="flex items-center gap-3">
+      <div class="p-2 bg-primary rounded-lg text-white flex items-center justify-center">
+        <span class="material-symbols-outlined text-2xl">grid_view</span>
+      </div>
+      <div>
+        <h1 class="text-lg font-bold leading-tight text-text-light dark:text-text-dark">ExamNexus</h1>
+        <p class="text-[10px] uppercase font-bold tracking-wider text-gray-500 dark:text-gray-400">Proctor Console</p>
+      </div>
+    </div>
+    <button class="flex items-center justify-center rounded-xl h-9 px-5 bg-primary/10 text-primary text-sm font-semibold hover:bg-primary/20 transition-colors">
+      Help
+    </button>
+  </header>
+
+  <!-- Main content -->
+  <main class="flex-1 flex flex-col items-center justify-center px-4 py-12">
+
+    <!-- Title block -->
+    <div class="text-center mb-8">
+      <h2 class="text-3xl md:text-4xl font-extrabold text-text-light dark:text-text-dark tracking-tight">
+        ExamNexus Portal : Login
+      </h2>
+      <p class="text-gray-500 dark:text-gray-400 mt-2 text-sm">
+        Secure access to your academic dashboard
+      </p>
+    </div>
+
+    <!-- Login card -->
+    <div class="w-full max-w-md bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl shadow-sm p-8">
+
+      <!-- Error message -->
+      <div id="error-box"
+        class="hidden mb-5 flex items-center gap-2 px-4 py-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-sm font-medium">
+        <span class="material-icons-outlined text-base">warning</span>
+        <span id="error-msg"></span>
+      </div>
+
+      <!-- User Login label -->
+      <p class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">User Login</p>
+
+      <!-- Username -->
+      <div class="relative mb-4">
+        <span class="material-icons-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-[20px] pointer-events-none">person_outline</span>
+        <input id="username" type="text" placeholder="Enter your User ID"
+          autocomplete="username"
+          class="w-full pl-10 pr-4 py-3 rounded-xl border border-border-light dark:border-border-dark bg-gray-50 dark:bg-gray-800 text-text-light dark:text-text-dark placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm transition"/>
+      </div>
+
+      <!-- Password label -->
+      <p class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Password</p>
+
+      <!-- Password -->
+      <div class="relative mb-2">
+        <span class="material-icons-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-[20px] pointer-events-none">lock_outline</span>
+        <input id="password" type="password" placeholder="Enter your password"
+          autocomplete="current-password"
+          class="w-full pl-10 pr-12 py-3 rounded-xl border border-border-light dark:border-border-dark bg-gray-50 dark:bg-gray-800 text-text-light dark:text-text-dark placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm transition"/>
+        <button type="button" onclick="togglePassword()"
+          class="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors">
+          <span class="material-icons-outlined text-[20px]" id="pw-eye">visibility</span>
+        </button>
+      </div>
+
+      <!-- Forgot password -->
+      <div class="text-right mb-6">
+        <button class="text-sm text-primary hover:underline font-medium">forgot password?</button>
+      </div>
+
+      <!-- Login button -->
+      <button id="login-btn" onclick="doLogin()"
+        class="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-primary hover:bg-primary-hover text-white font-bold text-sm transition-colors shadow-sm">
+        <span>Login</span>
+        <span class="material-icons-outlined text-[18px]">login</span>
+      </button>
+
+      <!-- Divider -->
+      <div class="flex items-center gap-3 my-5">
+        <div class="flex-1 h-px bg-border-light dark:bg-border-dark"></div>
+        <span class="text-[10px] uppercase tracking-widest font-bold text-gray-400">Authorized Access Only</span>
+        <div class="flex-1 h-px bg-border-light dark:bg-border-dark"></div>
+      </div>
+
+    </div>
+
+    <p class="mt-6 text-xs text-gray-400">InkSentinel · North South University</p>
+
+  </main>
+
+<script>
+  // Enter key triggers login
+  document.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+
+  function togglePassword() {
+    const inp = document.getElementById('password');
+    const eye = document.getElementById('pw-eye');
+    const show = inp.type === 'password';
+    inp.type   = show ? 'text' : 'password';
+    eye.textContent = show ? 'visibility_off' : 'visibility';
+  }
+
+  async function doLogin() {
+    const btn      = document.getElementById('login-btn');
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value;
+
+    if (!username || !password) {
+      showError('Please enter your username and password.');
+      return;
+    }
+
+    btn.disabled    = true;
+    btn.innerHTML   = '<span class="material-icons-outlined text-[18px] animate-spin">refresh</span><span>Authenticating…</span>';
+
+    try {
+      const res  = await fetch('/api/auth/login', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ username, password }),
+      });
+      const data = await res.json();
+
+      if (res.ok) {
+        window.location.href = data.redirect || '/exam-setup';
+      } else {
+        showError(data.error || 'Login failed. Please try again.');
+        btn.disabled  = false;
+        btn.innerHTML = '<span>Login</span><span class="material-icons-outlined text-[18px]">login</span>';
+      }
+    } catch (_) {
+      showError('Network error. Please check your connection.');
+      btn.disabled  = false;
+      btn.innerHTML = '<span>Login</span><span class="material-icons-outlined text-[18px]">login</span>';
+    }
+  }
+
+  function showError(msg) {
+    const box = document.getElementById('error-box');
+    document.getElementById('error-msg').textContent = msg;
+    box.classList.remove('hidden');
+    box.classList.add('flex');
+  }
+</script>
+</body>
+</html>

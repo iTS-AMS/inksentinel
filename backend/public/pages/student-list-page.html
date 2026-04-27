@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Student List | ExamNexus</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            primary:            '#FF5722',
+            secondary:          '#10B981',
+            danger:             '#EF4444',
+            warning:            '#F59E0B',
+            'background-light': '#F9FAFB',
+            'background-dark':  '#111827',
+            'surface-light':    '#FFFFFF',
+            'surface-dark':     '#1F2937',
+            'text-light':       '#1F2937',
+            'text-dark':        '#F3F4F6',
+            'border-light':     '#E5E7EB',
+            'border-dark':      '#374151',
+          },
+          fontFamily: { sans: ['Inter','sans-serif'] },
+          borderRadius: { DEFAULT: '0.5rem' },
+        },
+      },
+    };
+  </script>
+  <style>
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 3px; }
+    .dark ::-webkit-scrollbar-thumb { background: #475569; }
+    body { font-family: 'Inter', sans-serif; }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+  </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark antialiased h-screen flex overflow-hidden transition-colors duration-200">
+
+  <!-- Sidebar injected here by component-loader.js -->
+  <div id="sidebar-placeholder"></div>
+
+  <!-- ── Main content ──────────────────────────────────────── -->
+  <div class="flex-1 flex flex-col overflow-hidden">
+
+    <!-- Page header -->
+    <div class="flex items-center justify-between px-8 py-5 border-b border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark shrink-0">
+      <div>
+        <h1 class="text-xl font-bold text-text-light dark:text-text-dark">Student List</h1>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5" id="student-count">Loading…</p>
+      </div>
+      <button onclick="exportCSV()"
+        class="flex items-center gap-2 px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:opacity-90 transition-opacity">
+        <span class="material-icons-outlined text-base">download</span>
+        Export CSV
+      </button>
+    </div>
+
+    <!-- Scrollable content area -->
+    <div class="flex-1 overflow-y-auto px-8 py-6">
+
+      <!-- Search + filter row -->
+      <div class="flex gap-3 mb-5">
+        <div class="relative flex-1">
+          <span class="material-icons-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-[18px]">search</span>
+          <input id="search-input" type="text"
+            placeholder="Search by name or student ID…"
+            oninput="onSearch()"
+            class="w-full pl-9 pr-4 py-2.5 text-sm border border-border-light dark:border-border-dark rounded-lg bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition"/>
+        </div>
+        <select id="section-filter"
+          onchange="onSearch()"
+          class="px-3 py-2.5 text-sm border border-border-light dark:border-border-dark rounded-lg bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary transition min-w-[220px]">
+          <option value="">All sections</option>
+        </select>
+      </div>
+
+      <!-- Table card -->
+      <div class="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="border-b border-border-light dark:border-border-dark">
+                <th class="text-left px-5 py-3.5 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 whitespace-nowrap">Student Name</th>
+                <th class="text-left px-5 py-3.5 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 whitespace-nowrap">Student ID</th>
+                <th class="text-left px-5 py-3.5 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 whitespace-nowrap">Course / Section</th>
+                <th class="text-left px-5 py-3.5 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 whitespace-nowrap">Semester</th>
+                <th class="text-left px-5 py-3.5 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 whitespace-nowrap">Instructor</th>
+              </tr>
+            </thead>
+            <tbody id="students-tbody">
+              <tr>
+                <td colspan="5" class="text-center py-10 text-gray-400 dark:text-gray-500 text-sm">
+                  Loading…
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Pagination -->
+      <div id="pagination" class="flex items-center justify-center gap-1.5 py-5"></div>
+
+    </div><!-- /scrollable -->
+  </div><!-- /main -->
+
+  <script src="../scripts/theme-controller.js"></script>
+<script src="../scripts/component-loader.js"></script>
+<script>
+// ── Helpers ─────────────────────────────────────────────────
+async function api(path, opts = {}) {
+  const res = await fetch(path, { credentials: 'include', ...opts });
+  if (res.status === 401) { window.location.href = '/login'; return null; }
+  if (!res.ok) return null;
+  return res.json();
+}
+
+// Deterministic avatar color from student_id string
+const AVATAR_COLORS = ['#FF5722','#10B981','#3B82F6','#8B5CF6','#F59E0B','#EC4899'];
+function avatarColor(str) {
+  const h = [...(str||'')].reduce((a,c) => a + c.charCodeAt(0), 0);
+  return AVATAR_COLORS[h % AVATAR_COLORS.length];
+}
+function initials(name) {
+  const p = (name||'').trim().split(' ').filter(Boolean);
+  return p.length >= 2 ? p[0][0] + p[p.length-1][0] : (p[0]||'?')[0];
+}
+
+// ── State ────────────────────────────────────────────────────
+let page          = 1;
+let totalPages    = 1;
+let searchQuery   = '';
+let sectionId     = '';
+let searchTimer   = null;
+
+// ── Init ─────────────────────────────────────────────────────
+async function init() {
+  await loadSectionFilter();
+  await loadStudents();
+}
+
+// ── Section filter dropdown ──────────────────────────────────
+async function loadSectionFilter() {
+  const data = await api('/api/students/sections');
+  if (!data?.sections?.length) return;
+
+  const sel = document.getElementById('section-filter');
+  data.sections.forEach(sec => {
+    const opt = document.createElement('option');
+    opt.value = sec.section_id;
+    opt.textContent = `${sec.course_code}/${sec.section_name} — ${sec.year_session} ${sec.year}`;
+    sel.appendChild(opt);
+  });
+}
+
+// ── Search (debounced 350ms) ─────────────────────────────────
+function onSearch() {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => {
+    page        = 1;
+    searchQuery = document.getElementById('search-input').value.trim();
+    sectionId   = document.getElementById('section-filter').value;
+    loadStudents();
+  }, 350);
+}
+
+// ── Fetch students ───────────────────────────────────────────
+async function loadStudents() {
+  const tbody = document.getElementById('students-tbody');
+  tbody.innerHTML = `<tr><td colspan="5" class="text-center py-10 text-gray-400 text-sm">Loading…</td></tr>`;
+
+  const params = new URLSearchParams({ page, limit: 20, q: searchQuery });
+  if (sectionId) params.set('section_id', sectionId);
+
+  const data = await api(`/api/students?${params}`);
+  if (!data) {
+    tbody.innerHTML = `<tr><td colspan="5" class="text-center py-10 text-red-400 text-sm">Failed to load students</td></tr>`;
+    return;
+  }
+
+  const students = data.students   || [];
+  const pag      = data.pagination || { total: 0, pages: 1 };
+  totalPages     = pag.pages || 1;
+
+  document.getElementById('student-count').textContent =
+    `${pag.total} student${pag.total !== 1 ? 's' : ''} enrolled`;
+
+  renderTable(students);
+  renderPagination(pag);
+}
+
+// ── Table rows ───────────────────────────────────────────────
+function renderTable(students) {
+  const tbody = document.getElementById('students-tbody');
+
+  if (!students.length) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="5" class="text-center py-10 text-gray-400 dark:text-gray-500 text-sm">
+          No students found
+        </td>
+      </tr>`;
+    return;
+  }
+
+  tbody.innerHTML = students.map((s, i) => {
+    const color = avatarColor(s.student_id);
+    const ini   = initials(s.name).toUpperCase();
+
+    const section = s.course_code && s.section_name
+      ? `<span class="inline-block px-2 py-0.5 text-[11px] font-semibold rounded
+           border border-border-light dark:border-border-dark
+           bg-gray-100 dark:bg-gray-700 text-text-light dark:text-text-dark mono">
+           ${s.course_code}/${s.section_name}</span>`
+      : `<span class="text-gray-400">—</span>`;
+
+    const semester = s.year_session && s.year
+      ? `${s.year_session} ${s.year}`
+      : '—';
+
+    const instructor = s.instructor_initials || '—';
+
+    const rowBg = i % 2 === 0
+      ? 'bg-transparent'
+      : 'bg-gray-50 dark:bg-gray-800/40';
+
+    return `
+    <tr class="${rowBg} border-b border-border-light dark:border-border-dark last:border-0 hover:bg-primary/5 transition-colors duration-100">
+      <td class="px-5 py-3.5">
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0"
+            style="background:${color}22;color:${color}">
+            ${ini}
+          </div>
+          <div>
+            <div class="font-semibold text-sm">${s.name}</div>
+            <div class="text-xs text-gray-400 dark:text-gray-500">${s.email || '—'}</div>
+          </div>
+        </div>
+      </td>
+      <td class="px-5 py-3.5 mono text-xs text-primary font-medium">${s.student_id}</td>
+      <td class="px-5 py-3.5">${section}</td>
+      <td class="px-5 py-3.5 text-sm text-gray-600 dark:text-gray-300">${semester}</td>
+      <td class="px-5 py-3.5 text-sm text-gray-600 dark:text-gray-300">${instructor}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Pagination ───────────────────────────────────────────────
+const btnBase = `inline-flex items-center justify-center w-8 h-8 text-xs font-medium rounded-lg border transition-colors duration-100`;
+const btnIdle = `border-border-light dark:border-border-dark text-gray-500 dark:text-gray-400 hover:border-primary hover:text-primary bg-surface-light dark:bg-surface-dark`;
+const btnActive = `border-primary text-primary bg-primary/10`;
+const btnDisabled = `border-border-light dark:border-border-dark text-gray-300 dark:text-gray-600 cursor-not-allowed bg-surface-light dark:bg-surface-dark`;
+
+function renderPagination(pag) {
+  const wrap = document.getElementById('pagination');
+  if (pag.pages <= 1) { wrap.innerHTML = ''; return; }
+
+  const btn = (label, p, isActive = false, disabled = false) => {
+    if (disabled) return `<button disabled class="${btnBase} ${btnDisabled}">${label}</button>`;
+    if (isActive)  return `<button onclick="goPage(${p})" class="${btnBase} ${btnActive}">${label}</button>`;
+    return `<button onclick="goPage(${p})" class="${btnBase} ${btnIdle}">${label}</button>`;
+  };
+
+  let html = btn('‹', page - 1, false, page <= 1);
+
+  const max = 7;
+  let start = Math.max(1, page - 3);
+  let end   = Math.min(pag.pages, start + max - 1);
+  if (end - start < max - 1) start = Math.max(1, end - max + 1);
+
+  if (start > 1) {
+    html += btn('1', 1);
+    if (start > 2) html += `<span class="text-gray-400 px-1">…</span>`;
+  }
+  for (let p = start; p <= end; p++) {
+    html += btn(p, p, p === page);
+  }
+  if (end < pag.pages) {
+    if (end < pag.pages - 1) html += `<span class="text-gray-400 px-1">…</span>`;
+    html += btn(pag.pages, pag.pages);
+  }
+
+  html += btn('›', page + 1, false, page >= pag.pages);
+  wrap.innerHTML = html;
+}
+
+function goPage(p) {
+  if (p < 1 || p > totalPages) return;
+  page = p;
+  loadStudents();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ── Export CSV ───────────────────────────────────────────────
+async function exportCSV() {
+  const params = new URLSearchParams({ page: 1, limit: 1000, q: searchQuery });
+  if (sectionId) params.set('section_id', sectionId);
+
+  const data = await api(`/api/students?${params}`);
+  if (!data?.students?.length) return;
+
+  const headers = ['Name','Student ID','Email','Course','Section','Semester','Instructor'];
+  const rows = data.students.map(s => [
+    `"${(s.name||'').replace(/"/g,'""')}"`,
+    s.student_id || '',
+    s.email || '',
+    s.course_code || '',
+    s.section_name || '',
+    s.year_session && s.year ? `${s.year_session} ${s.year}` : '',
+    s.instructor_initials || '',
+  ]);
+
+  const csv  = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a    = document.createElement('a');
+  a.href     = URL.createObjectURL(blob);
+  a.download = `students_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+init();
+</script>
+</body>
+</html>

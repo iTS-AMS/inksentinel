@@ -19,7 +19,21 @@ function genCamId() {
 }
 
 // ── GET /api/feeds ────────────────────────────────────────────
+// Returns all active feeds with live-computed availability status.
+// availability: 'live' | 'available' | 'unregistered'
+//   live        — camera is actively connected and streaming
+//   available   — registered (has camera_id) but currently offline
+//   unregistered— feed row exists but camera_id never assigned
+// Sorted: live first, then available, then unregistered.
+// No dependency on feeds_available view — works with base schema.
 router.get('/', async (req, res) => {
+  // Returns all non-deleted feeds with status:
+  //   available    - connected=true,  not linked to any seat in camera_links
+  //   linked       - connected=true,  already linked to a seat (different modal)
+  //   disconnected - connected=false  (registered but offline)
+  // Optional ?seat=<label> tells us which seat is opening the modal so we can
+  // mark a feed as 'available' even if it's linked to THIS seat.
+  const currentSeat = req.query.seat || null;
   try {
     const result = await query(`
       SELECT
@@ -29,14 +43,29 @@ router.get('/', async (req, res) => {
         f.connected,
         f.camera_id,
         f.created_at,
-        f.deleted_at,
-        COUNT(d.id)  AS alert_count
+        cl.seat_label   AS linked_seat,
+        COUNT(d.id)     AS alert_count,
+        CASE
+          WHEN NOT f.connected                            THEN 'disconnected'
+          WHEN cl.seat_label IS NULL                      THEN 'available'
+          WHEN cl.seat_label = $1                         THEN 'available'
+          ELSE                                                 'linked'
+        END AS availability
       FROM   feeds f
-      LEFT   JOIN detections d ON d.feed_id = f.id
+      LEFT   JOIN camera_links cl ON cl.feed_id = f.id
+      LEFT   JOIN detections   d  ON d.feed_id  = f.id
       WHERE  f.deleted_at IS NULL
-      GROUP  BY f.id
-      ORDER  BY f.id
-    `);
+      GROUP  BY f.id, f.label, f.client_id, f.connected,
+                f.camera_id, f.created_at, cl.seat_label
+      ORDER  BY
+        CASE
+          WHEN NOT f.connected THEN 3
+          WHEN cl.seat_label IS NULL OR cl.seat_label = $1 THEN 1
+          ELSE 2
+        END,
+        f.label
+    `, [currentSeat]);
+    res.set('Cache-Control', 'no-store');
     res.json(result.rows);
   } catch (err) {
     console.error('[Feeds] List error:', err.message);

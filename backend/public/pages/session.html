@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Session | ExamNexus</title>
+  <!-- Theme runs before paint to avoid flash -->
+  <script src="../scripts/theme-controller.js"></script>
+
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            primary:             '#FF5722',
+            secondary:           '#10B981',
+            danger:              '#EF4444',
+            warning:             '#F59E0B',
+            'background-light':  '#F9FAFB',
+            'background-dark':   '#111827',
+            'surface-light':     '#FFFFFF',
+            'surface-dark':      '#1F2937',
+            'text-light':        '#1F2937',
+            'text-dark':         '#F3F4F6',
+            'border-light':      '#E5E7EB',
+            'border-dark':       '#374151',
+          },
+          fontFamily: { sans: ['Inter', 'sans-serif'] },
+        },
+      },
+    };
+  </script>
+
+  <style>
+    html, body { height: 100%; margin: 0; }
+    body { font-family: 'Inter', sans-serif; }
+
+    .app-layout { display: flex; height: 100vh; overflow: hidden; }
+    .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+    /* ── Page header ── */
+    .page-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 28px 32px 20px;
+      border-bottom: 1px solid #E5E7EB;
+      background: #fff;
+    }
+    .dark .page-header { background: #1F2937; border-color: #374151; }
+    .page-title { font-size: 22px; font-weight: 700; }
+    .page-sub   { font-size: 13px; color: #9CA3AF; margin-top: 2px; }
+
+    .btn-primary {
+      background: #FF5722; color: #fff; border: none;
+      padding: 9px 18px; border-radius: 8px; font-size: 13.5px;
+      font-weight: 600; cursor: pointer; display: flex;
+      align-items: center; gap: 6px; transition: background 0.15s;
+      font-family: inherit;
+    }
+    .btn-primary:hover { background: #E64A19; }
+
+    .content-area { flex: 1; overflow-y: auto; padding: 24px 32px; }
+
+    /* ── Search ── */
+    .search-row { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+    .search-wrapper { position: relative; flex: 1; max-width: 480px; }
+    .search-icon {
+      position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+      color: #9CA3AF; font-size: 18px; pointer-events: none;
+    }
+    .search-input {
+      width: 100%; padding: 9px 12px 9px 38px; border: 1px solid #E5E7EB;
+      border-radius: 8px; font-size: 13.5px; background: #fff; color: #1F2937;
+      outline: none; font-family: inherit; transition: border-color 0.15s;
+    }
+    .dark .search-input { background: #1F2937; color: #F3F4F6; border-color: #374151; }
+    .search-input:focus { border-color: #FF5722; }
+    .search-input::placeholder { color: #9CA3AF; }
+    .result-count { font-size: 13px; color: #6B7280; margin-left: auto; }
+
+    /* ── Table card ── */
+    .table-card { background: #fff; border: 1px solid #E5E7EB; border-radius: 12px; overflow: hidden; }
+    .dark .table-card { background: #1F2937; border-color: #374151; }
+
+    table { width: 100%; border-collapse: collapse; }
+    thead tr { border-bottom: 1px solid #F3F4F6; }
+    .dark thead tr { border-color: #374151; }
+    thead th {
+      padding: 11px 16px; text-align: left; font-size: 11px; font-weight: 600;
+      color: #9CA3AF; letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap;
+    }
+    tbody tr { border-bottom: 1px solid #F9FAFB; transition: background 0.1s; cursor: pointer; }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: #FFF8F6; }
+    .dark tbody tr { border-color: #374151; }
+    .dark tbody tr:hover { background: #374151; }
+    tbody td { padding: 14px 16px; font-size: 13.5px; }
+
+    /* ── Session name cell ── */
+    .session-name-cell { display: flex; align-items: center; gap: 10px; }
+    .folder-icon {
+      width: 28px; height: 28px; border-radius: 6px;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .folder-icon.active { background: #FFF3EE; color: #FF5722; }
+    .folder-icon.ended  { background: #F3F4F6; color: #9CA3AF; }
+    .dark .folder-icon.ended { background: #374151; }
+    .folder-icon .material-icons-outlined { font-size: 16px; }
+
+    /* ── Badges ── */
+    .badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 20px; font-size: 11.5px; font-weight: 600; }
+    .badge-active::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #16A34A; display: inline-block; }
+    .badge-active    { background: #F0FDF4; color: #16A34A; }
+    .badge-completed { background: #F9FAFB; color: #9CA3AF; }
+    .dark .badge-completed { background: #374151; }
+
+    /* ── Alert count ── */
+    .alert-count { font-weight: 600; }
+    .alert-count.has-alerts { color: #F59E0B; }
+    .alert-count.no-alerts  { color: #D1D5DB; }
+
+    /* ── Action buttons ── */
+    .action-btns { display: flex; align-items: center; gap: 4px; }
+    .action-btn {
+      background: none; border: none; padding: 5px; border-radius: 6px;
+      cursor: pointer; color: #9CA3AF; transition: all 0.15s;
+    }
+    .action-btn:hover { background: #F3F4F6; color: #1F2937; }
+    .dark .action-btn:hover { background: #374151; color: #F3F4F6; }
+    .action-btn .material-icons-outlined { font-size: 17px; }
+
+    /* ── Empty state ── */
+    .empty-state { padding: 56px 32px; text-align: center; color: #9CA3AF; font-size: 14px; }
+
+    /* ── Modal ── */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+      z-index: 200; align-items: center; justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-box {
+      background: #fff; border-radius: 14px; padding: 28px 32px;
+      width: min(500px, 95vw); display: flex; flex-direction: column; gap: 16px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+    }
+    .dark .modal-box { background: #1F2937; }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; }
+    .modal-title { font-size: 18px; font-weight: 700; }
+    .modal-close {
+      background: none; border: none; cursor: pointer; color: #9CA3AF;
+      padding: 4px; border-radius: 6px; transition: color 0.15s;
+    }
+    .modal-close:hover { color: #1F2937; }
+
+    .form-field { display: flex; flex-direction: column; gap: 5px; }
+    .form-label { font-size: 12.5px; font-weight: 600; color: #374151; }
+    .dark .form-label { color: #D1D5DB; }
+    .form-hint  { font-size: 11px; color: #9CA3AF; }
+    .form-input {
+      padding: 9px 12px; border: 1px solid #E5E7EB; border-radius: 8px;
+      font-size: 13.5px; font-family: inherit; color: #1F2937;
+      outline: none; transition: border-color 0.15s; background: #fff;
+    }
+    .dark .form-input { background: #111827; color: #F3F4F6; border-color: #374151; }
+    .form-input:focus { border-color: #FF5722; }
+    .form-input::placeholder { color: #9CA3AF; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+    .modal-error {
+      display: none; background: #FEF2F2; border: 1px solid #FECACA;
+      color: #DC2626; border-radius: 8px; padding: 10px 14px; font-size: 12.5px;
+    }
+    .modal-footer { display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px; }
+    .btn-ghost {
+      background: none; border: 1px solid #E5E7EB; color: #6B7280;
+      padding: 9px 16px; border-radius: 8px; font-size: 13.5px;
+      font-weight: 500; cursor: pointer; transition: all 0.15s; font-family: inherit;
+    }
+    .dark .btn-ghost { border-color: #374151; color: #9CA3AF; }
+    .btn-ghost:hover { background: #F9FAFB; color: #1F2937; }
+    .dark .btn-ghost:hover { background: #374151; color: #F3F4F6; }
+
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #D1D5DB; border-radius: 3px; }
+    tr.hidden-row { display: none; }
+  /* </style>
+  <style> */
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Inter', sans-serif; background: #F9FAFB; color: #1F2937; }
+ 
+    /* ── Layout ── */
+    .app-layout { display: flex; height: 100vh; overflow: hidden; }
+    .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+ 
+    /* ── Top bar ── */
+    .top-bar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 18px 32px; background: #fff;
+      border-bottom: 1px solid #E5E7EB;
+      flex-shrink: 0;
+    }
+    .top-bar-left { display: flex; align-items: center; gap: 12px; }
+    .back-btn {
+      background: none; border: none; cursor: pointer;
+      color: #6B7280; padding: 6px; border-radius: 8px;
+      transition: all 0.15s; display: flex; align-items: center;
+    }
+    .back-btn:hover { background: #F3F4F6; color: #1F2937; }
+    .back-btn .material-icons-outlined { font-size: 20px; }
+ 
+    .session-title { font-size: 20px; font-weight: 700; color: #1F2937; }
+    .session-meta-bar {
+      font-size: 13px; color: #6B7280; margin-top: 1px;
+    }
+ 
+    .session-status-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 4px 12px; border-radius: 20px;
+      font-size: 11.5px; font-weight: 700; letter-spacing: 0.04em;
+      text-transform: uppercase; flex-shrink: 0;
+    }
+    .badge-active-session {
+      background: #F0FDF4; color: #16A34A; border: 1px solid #BBF7D0;
+    }
+    .badge-active-session::before {
+      content: ''; width: 6px; height: 6px; border-radius: 50%;
+      background: #16A34A; display: block;
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+      0%,100% { opacity: 1; } 50% { opacity: 0.4; }
+    }
+    .badge-completed-session {
+      background: #F9FAFB; color: #6B7280; border: 1px solid #E5E7EB;
+    }
+ 
+    .audit-log-btn {
+      display: flex; align-items: center; gap: 6px;
+      padding: 8px 16px; border: 1px solid #E5E7EB;
+      border-radius: 8px; background: #fff; color: #374151;
+      font-size: 13px; font-weight: 500; cursor: pointer;
+      text-decoration: none; transition: all 0.15s;
+      font-family: 'Inter', sans-serif;
+    }
+    .audit-log-btn:hover { background: #F9FAFB; border-color: #D1D5DB; }
+    .audit-log-btn .material-icons-outlined { font-size: 16px; }
+ 
+    /* ── Scrollable content ── */
+    .content-scroll { flex: 1; overflow-y: auto; padding: 24px 32px; }
+ 
+    /* ── Stat cards ── */
+    .stat-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: 16px; margin-bottom: 24px;
+    }
+    .stat-card {
+      background: #fff; border: 1px solid #E5E7EB;
+      border-radius: 12px; padding: 20px 24px;
+    }
+    .stat-label {
+      font-size: 11px; font-weight: 600; color: #9CA3AF;
+      letter-spacing: 0.06em; text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .stat-value { font-size: 36px; font-weight: 700; line-height: 1; }
+    .stat-value.green  { color: #1F2937; }
+    .stat-value.orange { color: #F59E0B; }
+    .stat-value.teal   { color: #1F2937; }
+    .stat-value.green2 { color: #10B981; }
+ 
+    /* ── Two-column cards ── */
+    .two-col {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 16px; margin-bottom: 16px;
+    }
+ 
+    /* ── Card ── */
+    .card {
+      background: #fff; border: 1px solid #E5E7EB;
+      border-radius: 12px; padding: 20px 24px;
+      margin-bottom: 16px;
+    }
+    .card:last-child { margin-bottom: 0; }
+    .card-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    .card-title {
+      font-size: 14px; font-weight: 600; color: #1F2937;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .card-title .material-icons-outlined { font-size: 16px; color: #9CA3AF; }
+    .card-count { font-size: 12px; color: #9CA3AF; }
+ 
+    .view-all-link {
+      font-size: 13px; font-weight: 500; color: #FF5722;
+      text-decoration: none;
+    }
+    .view-all-link:hover { text-decoration: underline; }
+ 
+    /* ── Attendance table ── */
+    .att-table { width: 100%; border-collapse: collapse; }
+    .att-table thead tr { border-bottom: 1px solid #F3F4F6; }
+    .att-table th {
+      padding: 8px 12px; text-align: left;
+      font-size: 11px; font-weight: 600; color: #9CA3AF;
+      letter-spacing: 0.06em; text-transform: uppercase;
+    }
+    .att-table tbody tr { border-bottom: 1px solid #F9FAFB; }
+    .att-table tbody tr:last-child { border-bottom: none; }
+    .att-table td { padding: 11px 12px; font-size: 13.5px; }
+    .att-table .empty-cell {
+      text-align: center; color: #9CA3AF; padding: 32px; font-size: 13.5px;
+    }
+ 
+    .attendance-name-input {
+      background: transparent; border: none;
+      border-bottom: 1px solid #E5E7EB;
+      color: #1F2937; font-family: 'Inter', sans-serif;
+      font-size: 13px; padding: 2px 4px;
+      width: 160px; outline: none; transition: border-color 0.15s;
+    }
+    .attendance-name-input:focus    { border-color: #FF5722; }
+    .attendance-name-input::placeholder { color: #9CA3AF; }
+ 
+    /* ── Status badge inline ── */
+    .status-dot {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 12px; font-weight: 500;
+    }
+    .dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+    .dot.green { background: #10B981; }
+    .dot.gray  { background: #D1D5DB; }
+ 
+    /* ── Detection log items ── */
+    .det-item {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 10px 0; border-bottom: 1px solid #F9FAFB;
+      font-size: 13px;
+    }
+    .det-item:last-child { border-bottom: none; padding-bottom: 0; }
+    .det-icon {
+      width: 28px; height: 28px; border-radius: 6px;
+      background: #FFF8F0; display: flex; align-items: center;
+      justify-content: center; flex-shrink: 0;
+    }
+    .det-icon .material-icons-outlined { font-size: 15px; color: #F59E0B; }
+    .det-label { font-weight: 500; color: #1F2937; }
+    .det-meta  { font-size: 11.5px; color: #9CA3AF; margin-top: 1px; }
+    .det-empty { color: #9CA3AF; font-size: 13.5px; text-align: center; padding: 24px 0; }
+ 
+    /* ── Session details grid ── */
+    .details-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px;
+    }
+    .detail-item {}
+    .detail-label { font-size: 11px; font-weight: 600; color: #9CA3AF;
+      letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 4px; }
+    .detail-value { font-size: 14px; font-weight: 500; color: #1F2937; }
+ 
+    /* ── Dark mode overrides ── */
+    .dark body { background: #111827; color: #F3F4F6; }
+    .dark .top-bar { background: #1F2937; border-color: #374151; }
+    .dark .session-title { color: #F3F4F6; }
+    .dark .session-meta-bar { color: #9CA3AF; }
+    .dark .back-btn:hover { background: #374151; color: #F3F4F6; }
+    .dark .audit-log-btn { background: #1F2937; border-color: #374151; color: #D1D5DB; }
+    .dark .audit-log-btn:hover { background: #374151; }
+    .dark .stat-card { background: #1F2937; border-color: #374151; }
+    .dark .stat-value { color: #F3F4F6; }
+    .dark .card { background: #1F2937; border-color: #374151; }
+    .dark .card-title { color: #F3F4F6; }
+    .dark .att-table thead tr { border-color: #374151; }
+    .dark .att-table tbody tr { border-color: #374151; }
+    .dark .attendance-name-input { color: #F3F4F6; border-color: #374151; }
+    .dark .attendance-name-input:focus { border-color: #FF5722; }
+    .dark .det-item { border-color: #374151; }
+    .dark .det-icon { background: #374151; }
+    .dark .det-label { color: #F3F4F6; }
+    .dark .detail-value { color: #F3F4F6; }
+    .dark .warning-banner { background: #450a0a; border-color: #7f1d1d; color: #fca5a5; }
+    .dark .content-scroll { background: #111827; }
+    /* Stat card text - override inline colors that are hardcoded */
+    .dark .stat-value.green, .dark .stat-value.teal { color: #F3F4F6; }
+
+    /* ── Warning banner ── */
+    .warning-banner {
+      display: none; background: #FEF2F2; border: 1px solid #FECACA;
+      border-radius: 10px; padding: 14px 18px; margin-bottom: 20px;
+      font-size: 13.5px; color: #DC2626; align-items: center; gap: 8px;
+    }
+ 
+    /* ── End session button ── */
+    .btn-danger {
+      background: #EF4444; color: #fff; border: none;
+      padding: 8px 16px; border-radius: 8px; font-size: 13px;
+      font-weight: 600; cursor: pointer; font-family: 'Inter', sans-serif;
+      transition: background 0.15s; display: flex; align-items: center; gap: 6px;
+    }
+    .btn-danger:hover { background: #DC2626; }
+ 
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #D1D5DB; border-radius: 3px; }
+  </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark antialiased">
+
+<div class="app-layout">
+  <!-- Sidebar injected by component-loader.js -->
+  <div id="sidebar-placeholder"></div>
+
+  <!-- ── Main ── -->
+  <div class="main-content">
+
+    <!-- Top bar -->
+    <div class="top-bar">
+      <div class="top-bar-left">
+        <button class="back-btn" onclick="history.back()" title="Go back">
+          <span class="material-icons-outlined">arrow_back</span>
+        </button>
+        <div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <span class="session-title" id="session-title">—</span>
+            <span class="session-status-badge badge-completed-session" id="status-badge">
+              Loading
+            </span>
+          </div>
+          <div class="session-meta-bar" id="session-meta-bar">—</div>
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:10px">
+        <button class="btn-danger" id="end-btn" style="display:none" onclick="endSession()">
+          <span class="material-icons-outlined" style="font-size:16px">stop</span>
+          End Session
+        </button>
+        <a class="audit-log-btn" id="audit-log-link" href="#" onclick="openAuditLog()"
+          style="visibility:hidden;pointer-events:none;position:absolute">
+          <span class="material-icons-outlined">receipt_long</span>
+          Audit Log
+        </a>
+      </div>
+    </div>
+
+    <!-- Scrollable content -->
+    <div class="content-scroll">
+
+      <!-- Warning: no session -->
+      <div class="warning-banner" id="no-session-warning">
+        <span class="material-icons-outlined">warning</span>
+        No active session. &nbsp;
+        <a href="/allsessions" style="color:#DC2626;font-weight:600">Start a new session →</a>
+      </div>
+
+      <!-- Stat cards -->
+      <div class="stat-grid">
+        <div class="stat-card">
+          <div class="stat-label">Seats Connected</div>
+          <div class="stat-value green" id="kpi-seats">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Total Detections</div>
+          <div class="stat-value orange" id="kpi-alerts">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Duration</div>
+          <div class="stat-value teal" id="kpi-duration" style="font-size:28px">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Actions Taken</div>
+          <div class="stat-value green2" id="kpi-actions">0</div>
+        </div>
+      </div>
+
+      <!-- Attendance + Detection log (two-col) -->
+      <div class="two-col">
+
+        <!-- Attendance Register -->
+        <div class="card" style="margin-bottom:0">
+          <div class="card-header">
+            <div class="card-title">
+              <span class="material-icons-outlined">group</span>
+              Attendance Register
+            </div>
+            <span class="card-count" id="attendance-count">0 seats</span>
+          </div>
+
+          <table class="att-table">
+            <thead>
+              <tr>
+                <th>Seat / Name</th>
+                <th>Status</th>
+                <th>Alerts</th>
+              </tr>
+            </thead>
+            <tbody id="attendance-tbody">
+              <tr>
+                <td class="empty-cell" colspan="3">Loading...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Detection Log -->
+        <div class="card" style="margin-bottom:0">
+          <div class="card-header">
+            <div class="card-title">
+              <span class="material-icons-outlined" style="color:#F59E0B">warning_amber</span>
+              Detection Log
+            </div>
+            <a class="view-all-link" href="#" id="view-all-detections">View all →</a>
+          </div>
+          <div id="detection-log">
+            <div class="det-empty">No detections for this session</div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Session Details -->
+      <div class="card" style="margin-top:16px">
+        <div class="card-header" style="margin-bottom:20px">
+          <div class="card-title">
+            <span class="material-icons-outlined">info</span>
+            Session Details
+          </div>
+        </div>
+        <div class="details-grid">
+          <div class="detail-item">
+            <div class="detail-label">Created</div>
+            <div class="detail-value" id="detail-created">—</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">Ended</div>
+            <div class="detail-value" id="detail-ended">—</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">Room</div>
+            <div class="detail-value" id="detail-room">—</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">Session ID</div>
+            <div class="detail-value" id="detail-id">—</div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /content-scroll -->
+  </div><!-- /main-content -->
+</div><!-- /app-layout -->
+
+<script src="../scripts/theme-controller.js"></script>
+<script src="../scripts/component-loader.js"></script>
+<script>
+  // ── State ────────────────────────────────────────────────
+  const urlParams       = new URLSearchParams(window.location.search);
+  const urlSessionId    = urlParams.get('id') ? parseInt(urlParams.get('id')) : null;
+  let   currentSid      = urlSessionId;
+  let   isHistorical    = false;
+  let   refreshTimer    = null;
+  let   sessionStart    = null;
+
+  // ── Sidebar user ──────────────────────────────────────────
+  async function loadUserInfo() {
+    try {
+      const res  = await fetch('/api/auth/me', { credentials: 'include' });
+      if (!res.ok) return;
+      const data = await res.json();
+      const user = data.user || data;
+      if (user.username) {
+        document.getElementById('sb-name').textContent   = user.username;
+        document.getElementById('sb-avatar').textContent = user.username.charAt(0).toUpperCase();
+      }
+      if (user.role) document.getElementById('sb-role').textContent = user.role;
+    } catch (_) {}
+  }
+
+  function logout() {
+    fetch('/api/auth/logout', { method: 'POST', credentials: 'include' })
+      .catch(() => {})
+      .finally(() => window.location.href = '/');
+  }
+
+  // ── Helpers ───────────────────────────────────────────────
+  function fmtDateTime(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleString('en-US', {
+      month: 'numeric', day: 'numeric', year: 'numeric',
+      hour: 'numeric', minute: '2-digit',
+    });
+  }
+
+  function calcDuration(startIso, endIso) {
+    const start = new Date(startIso);
+    const end   = endIso ? new Date(endIso) : new Date();
+    const diffMs = end - start;
+    if (diffMs < 0) return '—';
+    const totalMins = Math.floor(diffMs / 60000);
+    const h = Math.floor(totalMins / 60);
+    const m = totalMins % 60;
+    if (h === 0) return `${m}m`;
+    return `${h}h ${m}m`;
+  }
+
+  // ── Load stats ────────────────────────────────────────────
+  async function loadStats() {
+    const url = currentSid
+      ? `/api/stats?session_id=${currentSid}`
+      : '/api/stats';
+
+    try {
+      const res  = await fetch(url, { credentials: 'include' });
+      if (!res.ok) throw new Error('Failed');
+      const data = await res.json();
+
+      if (!data.sessionInfo) {
+        // No session
+        document.getElementById('no-session-warning').style.display = 'flex';
+        document.getElementById('session-title').textContent = 'No Session';
+        document.getElementById('status-badge').textContent  = 'None';
+        document.getElementById('end-btn').style.display     = 'none';
+        return;
+      }
+
+      const s      = data.sessionInfo;
+      currentSid   = data.sessionId;
+      isHistorical = !!s.ended_at;
+      sessionStart = s.created_at;
+
+      // Title + status badge
+      document.getElementById('session-title').textContent = s.name;
+      const badge = document.getElementById('status-badge');
+      if (isHistorical) {
+        badge.textContent  = 'Completed';
+        badge.className    = 'session-status-badge badge-completed-session';
+      } else {
+        badge.innerHTML    = 'Active';
+        badge.className    = 'session-status-badge badge-active-session';
+      }
+
+      // Meta bar
+      const parts = [];
+      if (s.course_name)     parts.push(s.course_name);
+      if (s.instructor_name) parts.push(s.instructor_name);
+      if (s.time_block)      parts.push(s.time_block);
+      document.getElementById('session-meta-bar').textContent = parts.join(' · ') || '—';
+
+      // End button
+      document.getElementById('end-btn').style.display = isHistorical ? 'none' : 'flex';
+
+      // Audit log link — filter history by session
+      document.getElementById('audit-log-link').href = `/history?sessionId=${currentSid}`;
+
+      // KPI cards
+      document.getElementById('kpi-seats').textContent   = data.liveFeeds ?? 0;
+      document.getElementById('kpi-alerts').textContent  = data.totalAlerts ?? 0;
+      document.getElementById('kpi-actions').textContent = 0; // reserved for signal count
+      document.getElementById('kpi-duration').textContent =
+        calcDuration(s.created_at, s.ended_at);
+
+      // Session details
+      document.getElementById('detail-created').textContent = fmtDateTime(s.created_at);
+      document.getElementById('detail-ended').textContent   =
+        s.ended_at ? fmtDateTime(s.ended_at) : '—';
+      document.getElementById('detail-room').textContent    = s.room || '—';
+      document.getElementById('detail-id').textContent      = `#${currentSid}`;
+
+      // Detection log (from byFeed detections — build a simple list)
+      renderDetectionLog(data);
+
+      // Attendance
+      if (currentSid) loadAttendance(currentSid);
+
+    } catch (err) {
+      console.error('[Session] Stats error:', err);
+    }
+  }
+
+  // ── Detection log ─────────────────────────────────────────
+  // Derive a compact detection summary from byClass + byFeed
+  function renderDetectionLog(data) {
+    const logEl = document.getElementById('detection-log');
+    const classes = Object.entries(data.byClass || {});
+
+    if (classes.length === 0) {
+      logEl.innerHTML = '<div class="det-empty">No detections for this session</div>';
+      return;
+    }
+
+    // Show top 6 detection types as log entries
+    const shown = classes.slice(0, 6);
+    logEl.innerHTML = shown.map(([cls, count]) => `
+      <div class="det-item">
+        <div class="det-icon">
+          <span class="material-icons-outlined">person_search</span>
+        </div>
+        <div>
+          <div class="det-label">${escHtml(cls)}</div>
+          <div class="det-meta">${count} detection${count !== 1 ? 's' : ''} this session</div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // ── Attendance ────────────────────────────────────────────
+  async function loadAttendance(sessionId) {
+    try {
+      const res  = await fetch(`/api/sessions/${sessionId}/attendance`,
+        { credentials: 'include' });
+      if (!res.ok) throw new Error('Failed');
+      const data = await res.json();
+      renderAttendance(data.attendance || []);
+    } catch (err) {
+      document.getElementById('attendance-tbody').innerHTML =
+        '<tr><td class="empty-cell" colspan="3">Failed to load attendance</td></tr>';
+    }
+  }
+
+  function renderAttendance(rows) {
+    const tbody   = document.getElementById('attendance-tbody');
+    const countEl = document.getElementById('attendance-count');
+
+    countEl.textContent = `${rows.length} seat${rows.length !== 1 ? 's' : ''}`;
+
+    if (!rows.length) {
+      tbody.innerHTML =
+        '<tr><td class="empty-cell" colspan="3">No attendance recorded</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = rows.map(row => {
+      const alerts = Number(row.alert_count || 0);
+      return `
+        <tr>
+          <td>
+            <div style="font-weight:600;font-size:13.5px;color:#1F2937">
+              ${escHtml(row.feed_label)}
+            </div>
+            <input class="attendance-name-input"
+              type="text"
+              value="${escAttr(row.candidate_name || '')}"
+              placeholder="Add name..."
+              data-sfid="${row.id}"
+              onblur="saveName(this)"
+              onkeydown="if(event.key==='Enter') this.blur()">
+          </td>
+          <td>
+            <span class="status-dot">
+              <span class="dot gray"></span>
+              Offline
+            </span>
+          </td>
+          <td style="font-weight:600;color:${alerts > 0 ? '#F59E0B' : '#D1D5DB'}">
+            ${alerts > 0 ? alerts : '—'}
+          </td>
+        </tr>`;
+    }).join('');
+  }
+
+  async function saveName(input) {
+    const sfId = input.dataset.sfid;
+    const name = input.value.trim();
+    try {
+      await fetch(`/api/sessions/${currentSid}/attendance/${sfId}`, {
+        method:  'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body:    JSON.stringify({ candidate_name: name || null }),
+      });
+    } catch (_) {}
+  }
+
+  // ── End session ───────────────────────────────────────────
+  async function endSession() {
+    if (!currentSid) return;
+    if (!confirm('End this session? Cameras will need to reconnect for the next one.')) return;
+
+    try {
+      const res = await fetch(`/api/sessions/${currentSid}/end`, {
+        method: 'PUT', credentials: 'include'
+      });
+      if (res.ok) {
+        isHistorical = true;
+        document.getElementById('end-btn').style.display = 'none';
+        stopRefresh();
+        loadStats();
+      } else {
+        const d = await res.json();
+        alert('Error: ' + (d.error || 'Unknown error'));
+      }
+    } catch (_) { alert('Network error.'); }
+  }
+
+  function openAuditLog() {
+    const href = document.getElementById('audit-log-link').getAttribute('href');
+    if (href && href !== '#') window.location.href = href;
+  }
+
+  // ── Auto-refresh ──────────────────────────────────────────
+  function startRefresh() {
+    stopRefresh();
+    refreshTimer = setInterval(() => {
+      if (!isHistorical) loadStats();
+    }, 10000);
+  }
+  function stopRefresh() {
+    if (refreshTimer) { clearInterval(refreshTimer); refreshTimer = null; }
+  }
+
+  // ── Escape helpers ────────────────────────────────────────
+  function escHtml(s) {
+    return String(s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  function escAttr(s) {
+    return String(s).replace(/"/g,'&quot;');
+  }
+
+  // ── Init ──────────────────────────────────────────────────
+  loadUserInfo();
+  loadStats();
+  startRefresh();
+</script>
+</body>
+</html>
