@@ -106,9 +106,9 @@ router.patch('/', async (req, res) => {
   try {
     await query(`
       INSERT INTO user_settings (username)
-      VALUES ($${params.length + 1})
+      VALUES ($1)
       ON CONFLICT (username) DO NOTHING
-    `, [...params, username]);
+    `, [username]);
 
     params.push(username);
     const result = await query(`
