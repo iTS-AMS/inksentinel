@@ -122,15 +122,17 @@ const E = {
 };
 
 // ============================================================
-//  Theme
+//  Theme — delegates to theme-controller.js (loaded in <head>)
+//  Buttons cycle: light → dark → system → light
 // ============================================================
-function toggleTheme() {
-  const html = document.documentElement;
-  html.setAttribute('data-theme',
-    html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+const THEME_CYCLE = ['light', 'dark', 'system'];
+function cycleTheme() {
+  const current = localStorage.getItem('examnexus-theme') || 'system';
+  const next    = THEME_CYCLE[(THEME_CYCLE.indexOf(current) + 1) % THEME_CYCLE.length];
+  setTheme(next); // setTheme defined in theme-controller.js
 }
-['theme-btn-1','theme-btn-2','theme-btn-3'].forEach(id => {
-  $(id)?.addEventListener('click', toggleTheme);
+['theme-btn-1', 'theme-btn-2', 'theme-btn-3'].forEach(id => {
+  $(id)?.addEventListener('click', cycleTheme);
 });
 
 // ============================================================

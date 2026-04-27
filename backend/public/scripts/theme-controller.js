@@ -27,18 +27,16 @@ const FONT_SCALE_KEY = 'examnexus-font-scale';
 
 // ── Internal: apply theme class to <html> ────────────────────
 function _applyTheme(theme) {
-  const root = document.documentElement;
-  if (theme === 'dark') {
-    root.classList.add('dark');
-  } else if (theme === 'light') {
-    root.classList.remove('dark');
-  } else {
-    // system — follow OS preference
-    root.classList.toggle(
-      'dark',
-      window.matchMedia('(prefers-color-scheme: dark)').matches
-    );
-  }
+  const root      = document.documentElement;
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const useDark   = theme === 'dark' || (theme === 'system' && prefersDark);
+
+  // Tailwind class-based dark mode (darkMode: 'class')
+  root.classList.toggle('dark', useDark);
+
+  // data-theme attribute — required by style.css CSS variable selectors
+  // [data-theme="dark"] / [data-theme="light"] drive --border, --bg2, --bg3 etc.
+  root.setAttribute('data-theme', useDark ? 'dark' : 'light');
 }
 
 // ── Internal: apply font scale to <html> ────────────────────
